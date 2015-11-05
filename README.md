@@ -76,7 +76,7 @@ kitty.hungry = true; // Same as before
 ```
 
 
-### LCES Component Namespace
+## LCES Component Namespace
 
 LCES components have their namespace, a unique ID of sorts that you can reference with the `lces(name)` function. Components can not share a name. When you make a component it doesn't have an name, so you can set it in Javascript:
 ```javascript
@@ -93,6 +93,11 @@ And in HTML:
 ```
 
 A component constructor can be used to create components to be instanced like ordinary constructors, you can also change the prototype after inheriting from another LCES component with `jSh.inherit()` (See jSh below)
+
+
+## LCES Group Component
+
+More documation here soon
 
 
 ## LCES Widget
@@ -146,12 +151,18 @@ Is most of the the basic functonality provided in lcWidget, and with I have deri
 
 ## LCES Widget in HTML Markup
 
-You can set elements in your HTML markup to be widgets when the page loads: 
+You can set elements in your HTML markup to be widgets of a specific type via the `lces-widget` or `type` attribute when the page loads, if you leave it empty LCES will determine the type by itself.
 
 ```HTML
-<div lces-widget lces-name="litter-box">Dirty stuff to change here</div>
+<div lces-widget="widget" lces-name="litter-box">Dirty stuff to change here</div>
 
-And the following tag is used for more complicated widgets
+Will just be a normal widget...
+
+<input type="checkbox" lces-widget lces-name="kitty-check" />
+
+Will default to a checkbox type widget.
+
+And the following tag is used for more complicated widgets, it uses type instead of lces-widget to set the type
 
 <lces-widget type="window" name="cat-window">
   ...
@@ -168,8 +179,133 @@ litterBox.text = "All clean!";
 catWindow.visible = true;
 ```
 
-### lcGroup
 
-More documation here soon
+## lcWidget Derived Components
 
-###
+A component's just a building block, and I used it to build many other components. These are components that I've created with lcWidget.
+
+### lcTextField
+
+HTML:
+```HTML
+Name: <input type="text" lces-widget lces-name="name-input" />
+```
+
+Javascript:
+```javascript
+var nameInput  = lces("name-input"); // Reference
+var hobbyInput = new lcTextField();  // Create with Javascript
+
+hobbyInput.parent   = nameInput.parent;
+hobbyInput.LCESName = "hobby-input";
+
+nameInput.value  = "John Doe";
+hobbyInput.value = "Fishing";
+```
+
+lcTextArea functions the same way
+
+### lcNumberField
+
+HTML:
+```HTML
+<input type="text" lces-widget="numberfield" lces-name="date-input" lces-digits="2" lces-min="1" lces-max="31" placeholder="DD" value=""/>
+```
+
+Javascript:
+```javascript
+var numField = new lcNumberField();
+
+numField.min = 1;
+numField.max = 31;
+numField.digits = 2;
+numFiled.interger = false;
+numField.decimalPoints = 5;
+
+numField.parent = document.body;
+```
+
+### lcFileInput
+
+HTML:
+```HTML
+<input type="file" lces-widget lces-name="file-input" />
+```
+
+Javascript:
+```javascript
+var file = new lcFileInput();
+
+var input = file.input;
+```
+
+
+### lcCheckBox
+
+HTML:
+```HTML
+Optimized: <input type="checkbox" checked="checked" lces-widget lces-name="optimized-chkbox"/>
+```
+
+Javascript:
+```javascript
+var chkBox = new lcCheckBox();
+
+chkBox.addStateListener("checked", function(checked) {
+  if (!checked)
+    alert("Optimization is advised.");
+});
+
+chkBox.parent = document.body;
+```
+
+### lcDropDown
+
+HTML:
+```HTML
+<select lces-widget lces-name="package-select">
+  <option value="free">Free</option>
+  <option value="Premium">Premium</option>
+  <option value="Business">Business</option>
+</select>
+```
+Javascript:
+```javascript
+var dropDown = new lcDropDown();
+
+// Subject to future expansion very soon
+```
+
+### lcTable
+
+HTML:
+```HTML
+<table>
+  <thead>
+    <th>Name</th>
+    <th>Grade</th>
+    <th>Score</th>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Bobby</td>
+      <td>11th Grade</td>
+      <td>72%</td>
+    </tr>
+    <tr>
+      <td>Mark</td>
+      <td>12th Grade</td>
+      <td>87%</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+Javascript:
+```javascript
+var table = new lcTable();
+
+table.setHeadings(["Name", "Grade", "Score"]);
+table.addRow(["Bobby", "11th Grade", "72%"]);
+table.addRow(["Bobby", "11th Grade", "72%"]);
+```
