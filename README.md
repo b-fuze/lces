@@ -280,7 +280,7 @@ var dropDown = new lcDropDown();
 
 HTML:
 ```HTML
-<table>
+<table lces-widget lces-name="score-table">
   <thead>
     <th>Name</th>
     <th>Grade</th>
@@ -305,7 +305,7 @@ Javascript:
 ```javascript
 var table = new lcTable();
 
-table.setHeadings(["Name", "Grade", "Score"]);
+table.setHeadings(["Name", "Grade", "Score"]); 
 table.addRow(["Bobby", "11th Grade", "72%"]);
 table.addRow(["Mark", "12th Grade", "72%"]);
 ```
