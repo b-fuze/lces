@@ -6,7 +6,7 @@ If you want to see all the lcWidget components see lcWidget Derived Components
 
 ## Why I made LCES
 
-LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming, the seperation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a seperate `setWidth` method: 
+LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming in Javascript, the seperation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a seperate `setWidth` method: 
 
 ```javascript
 // To get the width
