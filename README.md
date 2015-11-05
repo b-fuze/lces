@@ -26,7 +26,7 @@ LCES solves this problem by introducing this construct that I call states to ena
 square.width += 2;
 
 // Another problem it solves is that you can know WHEN the width state changes
-square.addStateChange("width", function(newValue) {
+square.addStateListener("width", function(newValue) {
   console.log("Hey, width just changed! It's " + newValue);
 });
 ```
@@ -307,5 +307,5 @@ var table = new lcTable();
 
 table.setHeadings(["Name", "Grade", "Score"]);
 table.addRow(["Bobby", "11th Grade", "72%"]);
-table.addRow(["Bobby", "11th Grade", "72%"]);
+table.addRow(["Mark", "12th Grade", "72%"]);
 ```
