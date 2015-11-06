@@ -54,7 +54,7 @@ widget.setAttr("attribute", "value");
 widget.removeAttr("attribute1", "attribute2", "attribute3");
 ```
 
-Is the basic functonality of lcWidget, and from it is derived many other components.
+Is the basic functionality of **lcWidget**, and from it is derived many other components.
 
 ## LCES Widget in HTML Markup
 
@@ -97,7 +97,7 @@ A component is just a building block, and it can be used to build many other com
 
 *HTML:*
 ```HTML
-Name: <input type="text" lces-widget lces-name="name-input" />
+<input type="text" lces-widget lces-name="text-input" />
 ```
 
 *Javascript:*
@@ -391,7 +391,7 @@ So in essence, LCES is a getter/setter system with extra features.
 
 ## Getting Started with LCES Core
 
-LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with listeners that are invoked on every little change. Let's make with a cat component, then add a hungry state:
+LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with **listeners** that are invoked on every little change. Let's make with a cat component, then add a hungry state:
 
 ```javascript
 var cat = new lcComponent();
@@ -401,6 +401,7 @@ cat.addStateListener("hungry", function(value) {
   console.log("The cat is" + (value ? " " : "n't ") + "hungry :O");
 });
 
+// Whenever you need change the cat's hunger
 cat.hungry = true;  // > The cat is hungry :O
 cat.hungry = false; // > The cat isn't hungry :O
 
@@ -415,10 +416,11 @@ function Cat(name) {
   lcComponent.call(this); // Make an LCES component
   
   this.name = name; // Simple Object property
+  var that  = this;
   
   this.setState("hungry", false); // LCES state
   this.addStateListener("hungry", function(hungry) {
-    console.log("The cat is" + (value ? " " : "n't ") + "hungry :O");
+    console.log(that.name + " is" + (value ? " " : "n't ") + "hungry :O");
   });
 }
 
@@ -427,7 +429,7 @@ jSh.inherit(Cat, lcComponent); // To inherit prototype chain
 
 var kitty = new Cat("Socks");
 
-kitty.hungry = true; // Same as before
+kitty.hungry = true; // > Socks is hungry
 ```
 
 
@@ -456,4 +458,81 @@ More documation here soon
 
 ## jSh (jShorts2)
 
-More documation here soon
+jSh (jShorts2) is a library created to shorten normal coding procedures, like selecting and creating elements, extending objects, checking real object types, and so on.
+
+### jSh(selector);
+
+**Selector** - String. Returns elements located with `selector`.
+
+### 1 - jSh.d(idAndClass, content, child, attributes, properties, events);
+
+Returns a `DOMNode` <div> element created with the arguments provided. Aims to be similar to normal HTML markup nesting.
+
+*All of the arguments may be omitted by substituting undf (undefined) in their place*
+
+**idAndClass** - A string that contains the id and classname.
+
+Valid formats are:
+ * "#id.class"
+ * "#id.class.class.class" - No limit on class count
+ * "#id"
+ * ".class.class"
+
+**content** - The textContent of the element. To make it innerHTML instead use the `ih()` function:
+```javascript```
+jSh.d(..., ih("<img src=\"url.com\"/>"), ...);
+```
+
+**child** - Either a `DOMNode` or array of `DOMNodes`
+
+**attributes** - Object with properties and their values for the element's attributes.
+
+**properties** - Object with properties to be mapped the to the element created.
+
+### 2 - jSh.d(options);
+
+**Options** - Optional. Object containing alternative properties for all the arguments above.
+
+Format:
+```javascript
+var options = {
+  "class":  IdAndClass,
+  "text":   TextContentOrInnerHTML,
+  "child":  ChildOrArray,
+  "attr":   Attributes,
+  "prop":   Properties,
+  "events": Events
+};
+```
+
+#### Example
+```javascript
+// Method 1 - Ordered arguments
+var div = jSh.d("#id.class1.class2", ih("<br/> Some innerHTML..."), [
+  jSh.d(undf, "And TextContent here..."),
+  jSh.d(".avatar", undf, jSh.c("img", {prop: {src: "http://somesite.com/image.png"}})),
+  jSh.d(),
+  jSh.c("br"),
+  jSh.d(undf, ih("<b>It all works.</b>"))
+]);
+
+// Method 2 - Using options object
+var div = jSh.d({
+  class: "#id.class1.class2",
+  text: ih("<br/> Some innerHTML..."),
+  child: [
+    jSh.d({text: "And TextContent here..."}),
+    jSh.d({class: ".avatar", child: jSh.c("img", {prop: {src: "http://somesite.com/image.png"}})}),
+    ...
+  ]
+});
+
+// You could use whatever method you want, mixing the two for profit, your choice.
+```
+
+### jSh.c(tagName, args...);
+
+**tagName** - String. Name of the element's tag name, like `img`, `div`, `button`, and so forth.
+
+**args** - Optional. The same arguments as `jSh.d()`.
+
