@@ -93,7 +93,7 @@ catWindow.visible = true;
 
 A component is just a building block, and it can be used to build many other components. Here are some default components included with LCES:
 
-### new lcTextField([Input Element]);
+### # new lcTextField([Input Element]);
 
 *HTML:*
 ```HTML
@@ -117,9 +117,9 @@ An LCES state. Returns the input value, and assigning will change it.
 
 #### input.blur();
 
-`lcTextArea` functions the same way
+# `new lcTextArea([Textarea Element])` functions the same way
 
-### new lcNumberField([Input Element]);
+### # new lcNumberField([Input Element]);
 
 *HTML:*
 ```HTML
@@ -132,6 +132,10 @@ var numField = new lcNumberField();
 ```
 
 ### lcNumberField Properties
+
+#### numField.value
+
+LCES state. Number.
 
 #### numField.min
 
@@ -153,7 +157,7 @@ LCES state. Boolean. If false, won't accept any decimal values.
 
 LCES state. Number.
 
-### new lcFileInput([Input Element]);
+### # new lcFileInput([Input Element]);
 
 *HTML:*
 ```HTML
@@ -174,7 +178,7 @@ var file = new lcFileInput();
 
 **readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
 
-### new lcCheckBox([Input Element]);
+### # new lcCheckBox([Input Element]);
 
 *HTML:*
 ```HTML
@@ -192,7 +196,7 @@ var chkBox = new lcCheckBox();
 LCES State. Boolean.
 
 
-### new lcDropDown([Select Element]);
+### # new lcDropDown([Select Element]);
 
 *HTML:*
 ```HTML
@@ -217,7 +221,7 @@ var dropDown = new lcDropDown();
 
 **option** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-### new lcTable([Table Element]);
+### # new lcTable([Table Element]);
 
 *HTML:*
 ```HTML
@@ -267,7 +271,7 @@ var table = new lcTable();
 
 **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-### new lcAccordion([Reference Element]);
+### # new lcAccordion([Reference Element]);
 
 Creates an accordion with expandable sections.
 
@@ -308,14 +312,14 @@ LCES state. Number. Maximum sections tht can be opened at a time.
 
 **content** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
 
-### new lcColorChooser([Reference Element]);
+### # new lcColorChooser([Reference Element]);
 
 *HTML:*
 ```HTML
 <lces-widget type="colorchooser" name="color-chooser" color="rgb(128, 0, 112)"></lces-widget>
 ```
 
-The attributes `color` is optional.
+The attribute `color` is optional.
 
 *Javascript:*
 ```javascript
@@ -325,6 +329,35 @@ var color = new lcColorChooser();
 #### color.value
 
 LCES state. Array of three numerical 0-255 values representing RGB in that order respectively.
+
+### # new lcSlider([Reference Element]);
+
+*HTML:*
+```HTML
+<lces-widget type="slider" name="slider" min="0" max="100" prefix="$" suffix="%" hide-value="false"></lces-widget>
+```
+
+The attributes `min`, `max`, `prefix`, `suffix`, and `hide-value` are optional.
+
+*Javascript:*
+```javascript
+var slider = new lcSlider();
+```
+
+### Slider Properties
+
+#### slider.min
+
+LCES state. Number. Minimum value for the slider
+
+#### slider.max
+
+LCES state. Number. Maximum value for the slider
+
+#### slider.hideValue
+
+LCES state. Boolean. If true, will hide the value on the slider
+
 
 ## Why I made LCES
 
