@@ -1,0 +1,24 @@
+.lcesoption:after, .lces-file, .lces-themify button, table.lces thead th:before, .lces-slider-scrubber{
+  background-color: #41B6BD;
+}
+.lces-acc-arrow svg, .checkboxsvg .checkboxcolor, .radiobuttonsvg .radionbuttoncolor, .genreremovesvg .genreremovecolor {
+  fill: #41B6BD;
+}
+.lcesoption:hover, .lcesoption[lces-selected], table.lces tr {
+  background-color: rgba(65,182,189,0.125);
+}
+hr.lces, input.lces[type="text"], input.lces[type="password"], textarea.lces, .lcesdropdown, .lcesdropdown .lcesoptions, table.lces thead th, .lces-slider, .lces-colorchooser .lces-cc-display, .lces-notification>div {
+  border-color: #41B6BD;
+}
+.lces-accordion .lces-acc-section .lces-acc-title, .lces-window .lces-window-title, .lces-window .lces-window-buttonpanel {
+  background-color: rgba(65,182,189,0.1);
+}
+.lces-themify a, .lces-themify h1, .lces-themify h2, .lces-themify h3, .lces-themify h4, .lces-themify h5, .lces-themify h6, .lcesdropdown, table.lces tr, .lces-user-text-color, .lces-window .lces-window-title {
+  color: #41B6BD;
+}
+.lces-accordion .lces-acc-section {
+  border-color: rgba(65,182,189,0.5);
+}
+table.lces tr[checker] {
+  background-color: rgba(65,182,189,0.02);
+}
