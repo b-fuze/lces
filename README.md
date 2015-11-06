@@ -50,7 +50,7 @@ widget.setAttr("attribute", "value");
 widget.removeAttr("attribute1", "attribute2", "attribute3");
 ```
 
-Is most of the the basic functonality provided in lcWidget, and with I have derived many other helpful components.
+Is the basic functonality of lcWidget, and from it is derived many other components.
 
 ## LCES Widget in HTML Markup
 
@@ -72,41 +72,44 @@ And the following tag is used for more complicated widgets, it uses type instead
 </lces-widget>
 ```
 
-They'll be rendered into their respective forms when you invoke `lces.init();` for you to manipulate them in JS afterwards:
+They'll be rendered into their respective forms `lces.init();` is invoked for you to manipulate them in JS afterwards:
 
 ```javascript
-var litterBox = lces("litter-box");
-var catWindow = lces("cat-window");
+var litterBox  = lces("litter-box");
+var kittyCheck = lces("kitty-check");
+var catWindow  = lces("cat-window");
 
 litterBox.text = "All clean!";
+kittyCheck.checked = true;
 catWindow.visible = true;
 ```
 
 
 ## lcWidget Derived Components
 
-A component's just a building block, and I used it to build many other components. These are components that I've created with lcWidget.
+A component is just a building block, and it's used to build many other components. Here are some default components included with LCES.
 
-### lcTextField
+### new lcTextField([Input Element]);
 
-HTML:
+*HTML:*
 ```HTML
 Name: <input type="text" lces-widget lces-name="name-input" />
 ```
 
-Javascript:
+*Javascript:*
 ```javascript
-var nameInput  = lces("name-input"); // Reference
-var hobbyInput = new lcTextField();  // Create with Javascript
-
-hobbyInput.parent   = nameInput.parent;
-hobbyInput.LCESName = "hobby-input";
-
-nameInput.value  = "John Doe";
-hobbyInput.value = "Fishing";
+var input = new lcTextField(); 
 ```
 
-lcTextArea functions the same way
+#### States
+
+#### input.value
+
+Returns the input value, and assigning will change it. 
+
+####
+
+`lcTextArea` functions the same way
 
 ### lcNumberField
 
@@ -164,7 +167,7 @@ chkBox.parent = document.body;
 
 ### lcDropDown
 
-HTML:
+*HTML:*
 ```HTML
 <select lces-widget lces-name="package-select">
   <option value="free">Free</option>
@@ -172,16 +175,14 @@ HTML:
   <option value="Business">Business</option>
 </select>
 ```
-Javascript:
+*Javascript:*
 ```javascript
 var dropDown = new lcDropDown();
-
-// Subject to future expansion very soon
 ```
 
-### lcTable
+### new lcTable([Table Element]);
 
-HTML:
+*HTML:*
 ```HTML
 <table lces-widget lces-name="score-table">
   <thead>
@@ -204,21 +205,21 @@ HTML:
 </table>
 ```
 
-Javascript:
+*Javascript:*
 ```javascript
 var table = new lcTable();
 ```
 
-### table.setHeadings(headings);
+#### table.setHeadings(headings);
 _**headings**_ - Array of headings, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
 
-### table.addHeading(heading);
+#### table.addHeading(heading);
 _**heading**_ - Either a `string`, `DOMNode`, or `lcWidget`.
 
-### table.removeHeading(heading);
+#### table.removeHeading(heading);
 _**header**_ - Either a `string`, `DOMNode`, or `lcWidget`.
 
-### table.addRow(content);
+#### table.addRow(content);
 _**content**_ - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
 
 
