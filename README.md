@@ -76,7 +76,7 @@ And the following tag is used for more complicated widgets, it uses type instead
 </lces-widget>
 ```
 
-They'll be rendered into their respective forms `lces.init();` is invoked for you to manipulate them in JS afterwards:
+They'll be rendered into their respective forms after `lces.init();` sets things up for you to manipulate them in JS afterwards:
 
 ```javascript
 var litterBox  = lces("litter-box");
@@ -91,7 +91,7 @@ catWindow.visible = true;
 
 ## lcWidget Derived Components
 
-A component is just a building block, and it's used to build many other components. Here are some default components included with LCES.
+A component is just a building block, and it can be used to build many other components. Here are some default components included with LCES:
 
 ### new lcTextField([Input Element]);
 
@@ -267,7 +267,64 @@ var table = new lcTable();
 
 **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
+### new lcAccordion([Reference Element]);
 
+Creates an accordion with expandable sections.
+
+*HTML:*
+```HTML
+<lces-widget type="accordion" name="new-accordion" section-height="150" max-open="1" closeable>
+  <lces-section>
+    <lces-title>Section title</lces-title>
+      Section content goes here
+  </lces-section>
+</lces-widget>
+```
+
+*Javascript:*
+```javascript
+var accordion = new lcAccordion();
+```
+
+### lcAccordion Properties
+
+#### accordion.sectionHeight
+
+Number. Section open height in pixels
+
+#### accordion.sectionsCloseable
+
+Boolean. If true, clicking section titles will toggle them opening or closing
+
+#### accordion.maxOpen
+
+LCES state. Number. Maximum sections tht can be opened at a time.
+
+### lcAccordion Methods
+
+#### accordion.addSection(title, content);
+
+**title** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
+
+**content** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
+
+### new lcColorChooser([Reference Element]);
+
+*HTML:*
+```HTML
+<lces-widget type="colorchooser" name="color-chooser" color="rgb(128, 0, 112)"></lces-widget>
+```
+
+The attributes `color` is optional.
+
+*Javascript:*
+```javascript
+var color = new lcColorChooser();
+```
+
+#### color.value
+
+LCES state. Array of three numerical 0-255 values representing RGB in that order respectively.
 
 ## Why I made LCES
 
