@@ -93,7 +93,7 @@ catWindow.visible = true;
 
 A component is just a building block, and it can be used to build many other components. Here are some default components included with LCES:
 
-### # new lcTextField([Input Element]);
+### new lcTextField([Input Element]);
 
 *HTML:*
 ```HTML
@@ -119,7 +119,7 @@ An LCES state. Returns the input value, and assigning will change it.
 
 # `new lcTextArea([Textarea Element])` functions the same way
 
-### # new lcNumberField([Input Element]);
+### new lcNumberField([Input Element]);
 
 *HTML:*
 ```HTML
@@ -157,7 +157,7 @@ LCES state. Boolean. If false, won't accept any decimal values.
 
 LCES state. Number.
 
-### # new lcFileInput([Input Element]);
+### new lcFileInput([Input Element]);
 
 *HTML:*
 ```HTML
@@ -178,7 +178,7 @@ var file = new lcFileInput();
 
 **readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
 
-### # new lcCheckBox([Input Element]);
+### new lcCheckBox([Input Element]);
 
 *HTML:*
 ```HTML
@@ -196,7 +196,7 @@ var chkBox = new lcCheckBox();
 LCES State. Boolean.
 
 
-### # new lcDropDown([Select Element]);
+### new lcDropDown([Select Element]);
 
 *HTML:*
 ```HTML
@@ -221,7 +221,7 @@ var dropDown = new lcDropDown();
 
 **option** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-### # new lcTable([Table Element]);
+### new lcTable([Table Element]);
 
 *HTML:*
 ```HTML
@@ -271,7 +271,7 @@ var table = new lcTable();
 
 **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-### # new lcAccordion([Reference Element]);
+### new lcAccordion([Reference Element]);
 
 Creates an accordion with expandable sections.
 
@@ -312,7 +312,7 @@ LCES state. Number. Maximum sections tht can be opened at a time.
 
 **content** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
 
-### # new lcColorChooser([Reference Element]);
+### new lcColorChooser([Reference Element]);
 
 *HTML:*
 ```HTML
@@ -330,7 +330,7 @@ var color = new lcColorChooser();
 
 LCES state. Array of three numerical 0-255 values representing RGB in that order respectively.
 
-### # new lcSlider([Reference Element]);
+### new lcSlider([Reference Element]);
 
 *HTML:*
 ```HTML
