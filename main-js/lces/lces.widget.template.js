@@ -698,11 +698,23 @@ lces.rc[5] = function() {
 
   // Placeholder method for replacing it with a real node or MockupElement
   lces.template.__placeHolderReplace = function(e) {
+    var e = this._determineType(e);
+    
     if (!this.parent)
       return null;
     
     this.parent.insertBefore(e, this.element);
     this.parent.removeChild(this.element);
+  };
+  
+  lces.template.__placeHolderSubstitute = function(e) {
+    var e = this._determineType(e);
+    
+    if (!e.parentNode)
+      return null;
+    
+    e.parentNode.insertBefore(this.element, e);
+    e.parentNode.removeChild(e);
   };
 
   // LCES Placeholder Constructor
@@ -714,7 +726,9 @@ lces.rc[5] = function() {
     this.type = "LCES Placeholder Widget";
     
     this.replace = lces.template.__placeHolderReplace;
+    this.substitute = lces.template.__placeHolderSubstitute;
     this.element.replace = lces.template.__placeHolderReplace.bind(this);
+    this.element.substitute = lces.template.__placeHolderSubstitute.bind(this);
     
     this.addStateListener("phName", function(phName) {
       that.element.setAttribute("ph-name", phName);

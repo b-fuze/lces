@@ -179,6 +179,8 @@ lces.rc[3] = function() {
       this.element.appendChild(child);
     }
     
+    this.append = this.appendChild;
+    
     this.removeChild = function(child) {
       if (jSh.hasMultipleArgs(arguments, this))
         return;
@@ -186,6 +188,8 @@ lces.rc[3] = function() {
       var DOMElement = this._determineType(child);
       this.element.removeChild(DOMElement);
     }
+    
+    this.remove = this.removeChild;
     
     this.insertBefore = function(newElm, oldElm) {
       var newDOMElement = this._determineType(newElm);
@@ -198,7 +202,9 @@ lces.rc[3] = function() {
       this.element.setAttribute(attr, value === undf ? "null" : value);
     }
     
-    this.getAttr = this.element.getAttribute.bind(this.element);
+    this.getAttr = function(attr) {
+      this.element.getAttribute(attr);
+    }
     
     this.removeAttr = function(attr) {
       if (jSh.hasMultipleArgs(arguments, this))

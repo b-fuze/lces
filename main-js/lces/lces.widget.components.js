@@ -263,6 +263,41 @@ lces.rc[6] = function() {
       textDisplay.textContent = display;
     }
     
+    this.upload = function(url, keys, progressCb, readystatechangeCb) {
+      var form = new lcForm();
+      
+      // Get keys from input elements
+      if (jSh.type(keys) === "array")
+        keys.forEach(function(i) {form.append(i);});
+      
+      // Create FormData
+      var fd = new FormData(form);
+      
+      // Get keys from object properties
+      if (jSh.type(keys) === "object")
+        Object.getOwnPropertyNames(keys).forEach(function(i) {
+          fd.set(i, keys[i]);
+        });
+      
+      var req = new lcRequest({
+        method: "POST",
+        uri: url,
+        formData: fd,
+        callback: function() {
+          if (typeof readystatechangeCb === "function")
+            readystatechangeCb.call(this);
+        }
+      });
+      
+      if (req.xhr.upload && typeof callback === "function") {
+        req.xhr.upload.addEventListener("progress", function(e) {
+          callback.call(this, e);
+        });
+      }
+      
+      return req;
+    }
+    
     input.addEventListener("change", this.onchange);
   }
   
@@ -599,15 +634,19 @@ lces.rc[6] = function() {
   jSh.inherit(lcCheckBox, lcTextField);
 
 
-  window.lcDropDownOption = function(value, text) {
+  window.lcDropDownOption = function(value, content) {
     var that = this;
-    lcWidget.call(this, jSh.d());
+    lcWidget.call(this, jSh.d(".lcesoption"));
 
     this.type = "LCES Option Widget";
 
     this.value = value;
-    this.html = text;
-    this.classList.add("lcesoption");
+    
+    // Check content type
+    if (jSh.type(content) === "array")
+      this.append(content);
+    else
+      this.append(this._determineType(content));
 
     this.setState("selected", false);
     this.addStateListener("selected", function(state) {
@@ -630,39 +669,50 @@ lces.rc[6] = function() {
 
     this.options = [];
     this.setState("selectedOption", false);
-
-    this.selectElement = e;
-
+    
+    // Check for refElement
+    if (e)
+      this.selectElement = e;
+    
+    // Create necessary elements
     this.selectedDisplay = new lcWidget(jSh.d("lcesselected"));
     this.optionsContainer = new lcWidget(jSh.d("lcesoptions"));
     this.appendChild(this.selectedDisplay);
     this.optionsContainer.parent = this;
-
-    // We'll add the options
-    var longestOption = "";
-    var i = 0;
-    while (this.selectElement.getChild(i)) {
-      var option = this.selectElement.getChild(i);
-      var optionElement = new lcDropDownOption(option.value, option.innerHTML);
-
-      this.options.push([option.value + "op", option.innerHTML, optionElement]);
-
-
-      optionElement.parent = this.optionsContainer;
-      if (option.value === this.selectElement.value) {
-        this.selectedOption = optionElement;
-        this.selectedDisplay.html = option.innerHTML;
-        optionElement.selected = true;
-      }
-
-      if (option.innerHTML.length > longestOption.length)
-        longestOption = option.innerHTML;
-      i++;
+    
+    // Update size when new options added/removed
+    var longestOptionSize = 0;
+    var ph = jSh.ph();
+    
+    this.updateDropdownSize = function() {
+      longestOptionSize = 0;
+      
+      // Put in body element to ensure the browser renders it
+      ph.substitute(this);
+      document.body.appendChild(this.element);
+      
+      this.selectedDisplay.style = {width: "auto"};
+      var displayValue = this.selectedDisplay.html;
+      
+      this.options.forEach(function(option) {
+        that.selectedDisplay.html = option[1];
+        
+        var newWidth = parseInt(getComputedStyle(that.selectedDisplay.element)["width"]);
+        if (newWidth > longestOptionSize)
+          longestOptionSize = newWidth;
+      });
+      
+      // Set new width
+      this.selectedDisplay.style = {width: (longestOptionSize + 3) + "px"};
+      this.selectedDisplay.html = displayValue;
+      
+      // Put dropdown back in it's place
+      ph.replace(this);
     }
-
-
-
-    this.setState("value", this.selectedOption.value);
+    
+    
+    // State listeners
+    this.setState("value", null);
     this.addStateListener("value", function(value) {
       value = value + "";
       
@@ -695,11 +745,6 @@ lces.rc[6] = function() {
 
       return true;
     });
-
-
-    this.selectElement.parentNode.insertBefore(this.element, this.selectElement);
-    this.classList.add("lcesdropdown");
-    this.selectElement.style.display = "none";
     
     // Disable annoying default browser functionality
     this.addEventListener("mousedown", function(e) {
@@ -718,6 +763,7 @@ lces.rc[6] = function() {
       }
     });
     
+    // When focused by lces.focus
     this.removeAllStateListeners("focused");
     this.addStateListener("focused", function(state) {
       this.component.menuvisible = state;
@@ -733,6 +779,11 @@ lces.rc[6] = function() {
       }
     });
     
+    // Events for displaying options
+    function onWindowScroll() {
+      checkFlipped();
+    }
+    
     this.setState("menuvisible", false);
     this.addStateListener("menuvisible", function(state) {
       if (state) {
@@ -747,6 +798,7 @@ lces.rc[6] = function() {
       }
     });
     
+    // Event for knowing if menu goes below the viewport
     this.setState("flipped", false);
     this.addStateListener("flipped", function(flipped) {
       that.classList[flipped ? "add" : "remove"]("flipped");
@@ -765,15 +817,84 @@ lces.rc[6] = function() {
         that.flipped = false;
     }
     
-    function onWindowScroll() {
-      checkFlipped();
+    // ---------------------
+    // LCES DROPDOWN METHODS
+    // ---------------------
+    
+    // Add option
+    this.addOption = function(value, content) {
+      var newOption = new lcDropDownOption(value, content);
+      
+      this.options.push([value + "op", newOption.html, newOption]);
+      
+      newOption.parent = this.optionsContainer;
+      
+      this.updateDropdownSize();
+      return newOption;
     }
     
-    // To make the optionbox fit all the options
+    // Remove option
+    this.removeOption = function(option) {
+      var index   = typeof option === "number" ? option : undf;
+      var value   = typeof option === "string" ? option : undf;
+      var element = index === undf && value === undf ? this._determineType(option) : undf;
+      
+      var removeOptions = [];
+      
+      if (index !== undf) {
+        removeOptions.push([this.options[index], index]);
+      } else {
+        this.options.forEach(function(opt, i) {
+          if (value !== undf) {
+            if (value.toLowerCase() == opt[0])
+              removeOptions.push([opt, i]);
+          } else {
+            if (element && element.component === opt[2])
+              removeOptions.push([opt, i]);
+          }
+        });
+      }
+      
+      removeOptions.forEach(function(i) {
+        if (i[0]) {
+          that.options.splice(i[1], 1);
+          
+          that.optionsContainer.remove(i[0][2]);
+          
+          if (that.selectedOption === i[0][2])
+            that.selectedOption = that.options[0][2];
+        }
+      });
+      
+      this.updateDropdownSize();
+    }
+    
+    // Check for refElement and options
+    if (e) {
+      
+      if (e.parentNode)
+        e.parentNode.insertBefore(this.element, this.selectElement);
+      
+      // Add options
+      var endValue = null;
+      
+      var refOptions = jSh(e).jSh("option");
+      refOptions.forEach(function(i, index) {
+        var newOption = that.addOption(i.value, jSh.toArr(i.childNodes));
+        
+        if (i.value == e.value || index === 0)
+          endValue = newOption;
+      });
+      
+      this.selectedOption = endValue;
+      
+      // End refElement
+      e.style.display = "none";
+    }
+    
+    // End
     var selectedOption = this.selectedOption;
     this.value = undefined;
-    this.selectedDisplay.html = longestOption + "&nbsp;";
-    this.selectedDisplay.style = {width: getComputedStyle(this.selectedDisplay.element)["width"]};
     this.value = selectedOption.value;
   }
 
@@ -799,7 +920,13 @@ lces.rc[6] = function() {
   window.lcTCol = function(e) {
     lcWidget.call(this, e || jSh.c("td"));
   }
-
+  
+  jSh.inherit(lcTHead, lcWidget);
+  jSh.inherit(lcTBody, lcWidget);
+  jSh.inherit(lcTHeading, lcWidget);
+  jSh.inherit(lcTRow, lcWidget);
+  jSh.inherit(lcTCol, lcWidget);
+  
   window.lcTable = function(e) {
     lcWidget.call(this, e || jSh.c("table", "lces"));
     var that = this;
@@ -835,9 +962,14 @@ lces.rc[6] = function() {
       return newRow;
     }
     
+    this.insertBefore = undefined;
     this.insertBeforeRow = function(content, row) {
       var newRow = this.addRow(content, true);
-      var oldRow = this._determineType(row).component;
+      
+      if (typeof row === "number")
+        var oldRow = this.rows[row];
+      else
+        var oldRow = this._determineType(row).component;
       
       if (!oldRow)
         throw TypeError("Row " + row + " is invalid");
@@ -876,6 +1008,10 @@ lces.rc[6] = function() {
     }
     
     this.setHeadings = function(headings) {
+      this.headings.forEach(function(i) {
+        that.removeHeading(i);
+      });
+      
       var newHeadings = [];
       
       headings.forEach(function(i) {
@@ -893,12 +1029,30 @@ lces.rc[6] = function() {
       return newHead;
     }
     
-    this.removeHeading = function() {
-      // Do stuff here
+    this.removeHeading = function(head) {
+      if (typeof head === "number") {
+        head = this.headings[head];
+      } else {
+        head = this._determineType(head).component;
+      }
+      
+      if (!head)
+        return;
+      
+      var index = this.headings.indexOf(head);
+      
+      if (index !== -1)
+        this.headings.splice(index, 1);
+      
+      this.thead.removeChild(head.element);
     }
     
     this.removeAllHeadings = function() {
-      // Ditto
+      this.headings = [];
+      
+      while(this.thead.getChild(0)) {
+        this.thead.removeChild(this.thead.getChild(0));
+      }
     }
     
     this.removeAllRows = function() {
