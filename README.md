@@ -473,10 +473,10 @@ Returns a `DOMNode` <div> element created with the arguments provided. Aims to b
 **idAndClass** - A string that contains the id and classname.
 
 Valid formats are:
- * "#id.class"
- * "#id.class.class.class" - No limit on class count
- * "#id"
- * ".class.class"
+ * `"#id.class"`
+ * `"#id.class.class.class"` - No limit on class count
+ * `"#id"`
+ * `".class.class"`
 
 **content** - The textContent of the element. To make it innerHTML instead use the `ih()` function:
 ```javascript```
@@ -536,3 +536,79 @@ var div = jSh.d({
 
 **args** - Optional. The same arguments as `jSh.d()`.
 
+### jSh.svg(idAndClass, width, height, path);
+
+Creates an SVG element with it's paths that is normally a pain to achieve.
+
+**idAndClass** - Id or class with the same format as `jSh.d();`
+
+**width** - Width of SVG in pixels
+
+**height** - Height of SVG in pixels
+
+**path** - Either one path or array of paths created with `jSh.path();`
+
+### jSh.path(idAndClass, points, style);
+
+**idAndClass** - Id or class with the same format as `jSh.d();`
+
+**points** - SVG points, see example.
+
+**style** - Style attribute. See example.
+
+#### Example
+```javascript
+// Create a simple triangle (Used in lcAccordion)
+jSh.svg(".svg-triangle", 15, 15, [
+  jSh.path(undf, "M3.8 1.9L3.8 7.5 3.8 13.1 7.5 10.3 11.3 7.5 7.5 4.7 3.8 1.9z", "fill: #000;")
+])
+```
+
+### jSh.extendObj(extended, extension);
+
+Copies the own properties from `extension` to `extended`.
+
+**extended** - Object to be extended.
+
+**extension** - Object with own properties to be copied to the extended.
+
+#### Example
+```javascript
+jSh.extendObj(lces.types, {
+  "dropdown": lcDropDown,
+  "checkbox": lcCheckBox,
+  "textfield": lcTextField
+});
+
+// Is the same as
+
+lces.types["dropdown"] = lcDropDown;
+lces.types["checkbox"] = lcCheckBox;
+lces.types["textfield"] = lcTextField;
+```
+
+### jSh.toArr(arraylikeobject);
+
+Converts any array-like object into an array. e.g. `Element.childNodes`, the function scope `arguments` object, `strings`, and more.
+
+**arraylikeobject** - Any array-like data.
+
+#### Example
+```javascript
+jSh.toArr(arguments).forEach(function(argument) {
+  // Do whatever
+});
+```
+
+### jSh.type(data);
+
+Returns the correct type of `data`, e.g. `"null"` for `null` instead of `"object"` etc. 
+
+**data** - Anything.
+
+### jSh.nChars(string, n);
+
+Returns `string` multiplied `n` times.
+
+**string** - String. String to be multiplied.
+**n** - Number. Number of times to multiply string.
