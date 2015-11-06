@@ -29,7 +29,7 @@ lces.rc[12] = function() {
       }
       
       if (colorizeChk.checked)
-        css = AUCE.UI.colorizeCSS(css, colorize.value[0], colorize.value[1], colorize.value[2]);
+        css = lces.css.colorize(css, colorize.value[0], colorize.value[1], colorize.value[2]);
       
       cssOutput.value = css.trim();
       

@@ -1,17 +1,6 @@
 <html>
   <head>
     <title>CSS Compiler</title>
-    <!--
-    <script type="text/javascript" src="jShorts2.js"></script>
-    <script type="text/javascript" src="../misc/quadsmooth.js"></script>
-    <script type="text/javascript" src="lces.core.js"></script>
-    <script type="text/javascript" src="lces.widget.js"></script>
-    <script type="text/javascript" src="lces.widget.misc.js"></script>
-    <script type="text/javascript" src="lces.widget.template.js"></script>
-    <script type="text/javascript" src="lces.widget.components.js"></script>
-    <script type="text/javascript" src="lces.widget.colorchooser.js"></script>
-    <script type="text/javascript" src="lces.widget.floating.js"></script>
-     -->
     
     <script type="text/javascript">
       function loadAll(k){function l(b){var a=document.createElement("script");a.type="text/javascript";a.onload=function(){d.push(b);g()};e.appendChild(a);a.src=b;return a}function m(b){var a=document.createElement("link");a.rel="stylesheet";a.type="text/css";a.onload=function(){d.push(b);g()};e.appendChild(a);a.href=b;return a}function g(){d.length===c.length&&f&&f()}var e=document.getElementsByTagName("head")[0];var d=[],h=[],c=Array.prototype.slice.call(arguments).slice(1),f;"function"===typeof c[c.length-1]&&(f=c.pop());switch(k){case "js":c.forEach(function(b){h.push(l(b))});break;case "css":c.forEach(function(b){h.push(m(b))})}};
@@ -23,17 +12,17 @@
       lces.rc = new Array(9);
       
       loadAll("js",
-        "../../css/lces.themify.css.js",
-        "jShorts2.js",
-        "../misc/quadsmooth.js",
-        "lces.core.js",
-        "lces.widget.js",
-        "lces.widget.misc.js",
-        "lces.widget.template.js",
-        "lces.widget.components.js",
-        "lces.widget.colorchooser.js",
-        "lces.widget.floating.js",
-        "../misc/auc.essentials.js",
+        "../main-js/lces/lces.themify.css.js",
+        "../main-js/misc/jShorts2.js",
+        "../main-js/misc/quadsmooth.js",
+        "../main-js/lces/lces.core.js",
+        "../main-js/lces/lces.widget.js",
+        "../main-js/lces/lces.widget.misc.js",
+        "../main-js/lces/lces.widget.template.js",
+        "../main-js/lces/lces.widget.components.js",
+        "../main-js/lces/lces.widget.colorchooser.js",
+        "../main-js/lces/lces.widget.floating.js",
+        "../main-js/misc/css.essentials.js",
         "css.compile.js",
         function() {
           lces.rc.forEach(function(i) {i();});
