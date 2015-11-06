@@ -28,17 +28,17 @@ br2 {
 
 @font-face {
   font-family: "CODE";
-  src: url(CODEBOLD.otf);
+  src: url(code-bld.otf);
 }
 
 @font-face {
   font-family: "Lato";
-  src: url(Lato-Reg.ttf);
+  src: url(lato-reg.ttf);
 }
 
 @font-face {
   font-family: "Righteous";
-  src: url(Lato-Reg.ttf);
+  src: url(righteous.ttf);
 }
 
 @font-face {
