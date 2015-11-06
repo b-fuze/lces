@@ -101,17 +101,21 @@ Name: <input type="text" lces-widget lces-name="name-input" />
 var input = new lcTextField(); 
 ```
 
-#### States
+### lcTextField Properties
 
 #### input.value
 
-Returns the input value, and assigning will change it. 
+An LCES state. Returns the input value, and assigning will change it. 
 
-####
+### lcTextField Methods
+
+#### input.focus();
+
+#### input.blur();
 
 `lcTextArea` functions the same way
 
-### lcNumberField
+### new lcNumberField([Input Element]);
 
 *HTML:*
 ```HTML
@@ -121,17 +125,31 @@ Returns the input value, and assigning will change it.
 *Javascript:*
 ```javascript
 var numField = new lcNumberField();
-
-numField.min = 1;
-numField.max = 31;
-numField.digits = 2;
-numFiled.interger = false;
-numField.decimalPoints = 5;
-
-numField.parent = document.body;
 ```
 
-### lcFileInput
+### lcNumberField Properties
+
+#### numField.min
+
+LCES state. Number.
+
+#### numField.max
+
+LCES state. Number.
+
+#### numField.digits
+
+LCES state. Number.
+
+#### numField.integer
+
+LCES state. Boolean. If false, won't accept any decimal values.
+
+#### numField.decimalPoints
+
+LCES state. Number.
+
+### new lcFileInput([Input Element]);
 
 *HTML:*
 ```HTML
@@ -143,30 +161,28 @@ numField.parent = document.body;
 var file = new lcFileInput();
 ```
 
-#### file.upload(url, progress, readystatechange);
+#### file.upload(url, keys, progress, readystatechange);
 **url** - String. Upload url
 
-**progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent), if intended to be omitted, substitute with any falsy value.
+**keys** - Optional. Either array of input elements (lcWidget wrappers allowed), or normal key-value object to be included in the request. If omitted, substitute with any falsy value to use the following arguments.
 
+**progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent). If omitted, substitute with any falsy value.
 
-### lcCheckBox
+**readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
 
-HTML:
+### new lcCheckBox([Input Element]);
+
+*HTML:*
 ```HTML
 Optimized: <input type="checkbox" checked="checked" lces-widget lces-name="optimized-chkbox"/>
 ```
 
-Javascript:
+*Javascript:*
 ```javascript
 var chkBox = new lcCheckBox();
-
-chkBox.addStateListener("checked", function(checked) {
-  if (!checked)
-    alert("Optimization is advised.");
-});
-
-chkBox.parent = document.body;
 ```
+
+
 
 ### lcDropDown
 
