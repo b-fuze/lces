@@ -113,12 +113,12 @@ Returns the input value, and assigning will change it.
 
 ### lcNumberField
 
-HTML:
+*HTML:*
 ```HTML
 <input type="text" lces-widget="numberfield" lces-name="date-input" lces-digits="2" lces-min="1" lces-max="31" placeholder="DD" value=""/>
 ```
 
-Javascript:
+*Javascript:*
 ```javascript
 var numField = new lcNumberField();
 
@@ -133,17 +133,20 @@ numField.parent = document.body;
 
 ### lcFileInput
 
-HTML:
+*HTML:*
 ```HTML
 <input type="file" lces-widget lces-name="file-input" />
 ```
 
-Javascript:
+*Javascript:*
 ```javascript
 var file = new lcFileInput();
-
-var input = file.input;
 ```
+
+#### file.upload(url, progress, readystatechange);
+**url** - String. Upload url
+
+**progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent), if intended to be omitted, substitute with any falsy value.
 
 
 ### lcCheckBox
@@ -211,16 +214,23 @@ var table = new lcTable();
 ```
 
 #### table.setHeadings(headings);
-_**headings**_ - Array of headings, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+**headings** - Array of headings, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
 
 #### table.addHeading(heading);
-_**heading**_ - Either a `string`, `DOMNode`, or `lcWidget`.
+**heading** - Either a `string`, `DOMNode`, or `lcWidget`.
 
 #### table.removeHeading(heading);
-_**header**_ - Either a `string`, `DOMNode`, or `lcWidget`.
+**heading** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 #### table.addRow(content);
-_**content**_ - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+**content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+
+#### table.removeRow(row);
+**row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+
+#### table.insertBeforeRow(content, row);
+**content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+**row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 
 
