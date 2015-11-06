@@ -27,9 +27,13 @@ widget.parent = document.body;
 widget.parent = null;
 
 // Append other elements
-widget.appendChild(element, element2, element3); // Can append more than one element at a time
+widget.append(element, element2, element3); // Can append more than one element at a time
 // Or
-widget.appendChild(childArray);
+widget.append(childArray);
+
+widget.remove(element, element2, element3);
+// Or
+widget.remove(childArray);
 
 widget.children; // Array of childNodes
 
@@ -181,10 +185,14 @@ Optimized: <input type="checkbox" checked="checked" lces-widget lces-name="optim
 ```javascript
 var chkBox = new lcCheckBox();
 ```
+### lcCheckBox Properties
+
+#### chkBox.checked
+
+LCES State. Boolean.
 
 
-
-### lcDropDown
+### new lcDropDown([Select Element]);
 
 *HTML:*
 ```HTML
@@ -198,6 +206,16 @@ var chkBox = new lcCheckBox();
 ```javascript
 var dropDown = new lcDropDown();
 ```
+
+#### dropDown.addOption(value, content);
+
+**value** - Either a `number` or `string`.
+
+**content** - Either a `string`, `DOMNode`, or `lcWidget`.
+
+#### dropDown.removeOption(option);
+
+**option** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 ### new lcTable([Table Element]);
 
@@ -246,6 +264,7 @@ var table = new lcTable();
 
 #### table.insertBeforeRow(content, row);
 **content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+
 **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 
@@ -256,16 +275,16 @@ LCES (pronounced "Elsis") was originally created to solve a problem that I had w
 
 ```javascript
 // To get the width
-var width = square.width; // square.getWidth() if you will
+var width = square.width; // or square.getWidth() if you will
 
 // Use a seperate method to change it
 square.setWidth(width + 2);
 ```
 
 
-This has a few problems, the first being that `width` and `setWidth()` are two seperate things, so if you wanted to add another property, height for example, you would make a `height` AND a `setHeight()`. In some instances, this is perfectly OK, but for simple straigtforward properties that don't require a bunch of redundant methods, it can get annoying. And since you're dependant on both, if other things are manipulating them then things can get hectic.
+This has a few problems, the first being that `width` and `setWidth()` are two seperate things, so if you wanted to add another property, `height` for example, you would make a `height` property AND a `setHeight()` method. Sometimes this is OK, but for simple straigtforward properties it can get annoying. And if other things are manipulating them then things can get really hectic.
 
-LCES solves this problem by introducing this construct that I call states to enable the following:
+LCES solves this problem by introducing this construct called **states**, similar to normal properties:
 
 ```javascript
 // Firstly it combine the two previous procedures into one.
@@ -282,7 +301,7 @@ So in essence, LCES is a getter/setter system with extra features.
 
 ## Getting Started with LCES Core
 
-In LCES you have two things, a component and it's states. A component is just a thing, and it can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with listeners and invoke them on every little change. Let's start with a cat, then add a sleeping state.
+LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with listeners that are invoked on every little change. Let's make with a cat component, then add a hungry state:
 
 ```javascript
 var cat = new lcComponent();
@@ -299,7 +318,7 @@ cat.hungry = false; // > The cat isn't hungry :O
 var hungryKitty = cat.hungry;
 ```
 
-Making your own component constructor is just like making any other constructor:
+Making custom component constructors is just like making any other constructor:
 
 ```Javascript
 function Cat(name) {
@@ -324,7 +343,7 @@ kitty.hungry = true; // Same as before
 
 ## LCES Component Namespace
 
-LCES components have their namespace, a unique ID of sorts that you can reference with the `lces(name)` function. Components can not share a name. When you make a component it doesn't have an name, so you can set it in Javascript:
+LCES components have their own namespace, a unique ID of sorts referenced with the `lces(name)` function. New components don't have a name, so you can set it in Javascript:
 ```javascript
 cat.LCESName = "unique-kitty"; // Set the name
 
@@ -345,3 +364,6 @@ A component constructor can be used to create components to be instanced like or
 
 More documation here soon
 
+## jSh (jShorts2)
+
+More documation here soon
