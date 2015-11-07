@@ -1,0 +1,80 @@
+<html>
+  <head>
+    <title>CSS Compiler</title>
+    
+    <script type="text/javascript">
+      function loadAll(k){function l(b){var a=document.createElement("script");a.type="text/javascript";a.onload=function(){d.push(b);g()};e.appendChild(a);a.src=b;return a}function m(b){var a=document.createElement("link");a.rel="stylesheet";a.type="text/css";a.onload=function(){d.push(b);g()};e.appendChild(a);a.href=b;return a}function g(){d.length===c.length&&f&&f()}var e=document.getElementsByTagName("head")[0];var d=[],h=[],c=Array.prototype.slice.call(arguments).slice(1),f;"function"===typeof c[c.length-1]&&(f=c.pop());switch(k){case "js":c.forEach(function(b){h.push(l(b))});break;case "css":c.forEach(function(b){h.push(m(b))})}};
+      
+      function lces(lcesname) {
+        return LCES.components[lcesname];
+      }
+      
+      lces.rc = new Array(9);
+      
+      loadAll("js",
+        "../main-js/lces/lces.themify.css.js",
+        "../main-js/misc/jShorts2.js",
+        "../main-js/misc/quadsmooth.js",
+        "../main-js/lces/lces.core.js",
+        "../main-js/lces/lces.widget.js",
+        "../main-js/lces/lces.widget.misc.js",
+        "../main-js/lces/lces.widget.template.js",
+        "../main-js/lces/lces.widget.components.js",
+        "../main-js/lces/lces.widget.colorchooser.js",
+        "../main-js/lces/lces.widget.floating.js",
+        "../main-js/misc/css.essentials.js",
+        "css.compile.js",
+        function() {
+          lces.rc.forEach(function(i) {i();});
+        }
+      );
+      
+      window.addEventListener("load", function() {
+        lces.init();
+      });
+    </script>
+    
+    <!-- <link rel="stylesheet" href="../../css/lces.core.css" media="screen" title="no title" charset="utf-8"> -->
+    
+    <style media="screen">
+      .lcesoption:after,.lces-file,.lces-themify button,table.lces thead th:before,.lces-slider-scrubber{background-color: #800070;}.lces-acc-arrow svg,.checkboxsvg .checkboxcolor,.radiobuttonsvg .radionbuttoncolor,.genreremovesvg .genreremovecolor{fill: #800070;}.lcesoption:hover,.lcesoption[lces-selected],table.lces tr{background-color:rgba(128, 0, 112,0.125);}hr.lces,input.lces[type="text"],input.lces[type="password"],textarea.lces,.lcesdropdown,.lcesdropdown .lcesoptions,table.lces thead th,.lces-slider,.lces-colorchooser .lces-cc-display,.lces-notification>div{border-color: #800070;}.lces-accordion .lces-acc-section .lces-acc-title,.lces-window .lces-window-title,.lces-window .lces-window-buttonpanel{background-color:rgba(128, 0, 112,0.1);}.lces-themify a,.lces-themify h1,.lces-themify h2,.lces-themify h3,.lces-themify h4,.lces-themify h5,.lces-themify h6,.lcesdropdown,table.lces tr,.lces-user-text-color,.lces-window .lces-window-title{color: #800070;}.lces-accordion .lces-acc-section{border-color:rgba(128, 0, 112,0.5);}table.lces tr[checker]{background-color:rgba(128, 0, 112,0.02);}
+    </style>
+    <style media="screen">
+      body {
+        overflow: auto !important;
+      }
+      label {
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body class="lces-themify">
+    <lces-widget type="window" name="css-win-main" buttonpanel-visible="false" visible="true" width="700" height="550" centered>
+      <lces-title>CSS Compiler &amp; Colorizer</lces-title>
+      <lces-contents>
+        <h5>CSS Code:</h5>
+        <div class="lc-indent">
+          <textarea class="lces" style="width: 100%;height: 160px;" lces-widget lces-name="css-input" placeholder="Enter CSS here"></textarea>
+          <br2></br2>
+        </div>
+        
+        <br2></br2>
+        <div class="lc-indent">
+          <div lces-widget="control" lces-name="compile-btn-ctrl" class="lc-inlineblock"><button lces-widget lces-name="compile-btn">Process</button><button style="background: red;" lces-widget lces-name="clear-btn">Clear</button></div>
+          <br2></br2>
+          <div class="lc-indent">
+            <input id="css-compile-chkbox" type="checkbox" checked="true" lces-widget lces-name="css-compile-chkbox"> <label for="css-compile-chkbox">Compile</label>
+            <br>
+            <input id="css-colorize-chkbox" type="checkbox" lces-widget lces-name="css-colorize"/> <label for="css-colorize-chkbox">Colorize</label>&nbsp;&nbsp;<lces-widget type="colorchooser" name="css-color" flipped="true" color="rgb(128, 0, 112)"></lces-widget>&nbsp;&nbsp;<i style="color: #BFBFBF;font-size: 13px;">Assumes that all your colors are of similar hue. Not hsl/hsv compatible.</i>
+          </div>
+        </div>
+        <br2></br2>
+        
+        <h5>Output:</h5>
+        <div class="lc-indent">
+          <textarea style="width: 100%;height: 160px;background: #F2F2F2;" class="lces" lces-widget lces-name="css-output" placeholder="Output"></textarea>
+        </div>
+      </lces-contents>
+    </lces-widget>
+  </body>
+</html>
