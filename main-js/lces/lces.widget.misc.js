@@ -293,17 +293,17 @@ lces.rc[4] = function() {
   //
   // LCES DynText TOKEN TYPES: "text", "open", "close", "closed", "property"
   lces.dynText.lexerTypes = {
-    "text": function(char) {
-      return /[a-zA-Z\d_]/.test(char);
+    "text": function(character) {
+      return /[a-zA-Z\d_]/.test(character);
     },
-    "number": function(char) {
-      return /[\d]/.test(char);
+    "number": function(character) {
+      return /[\d]/.test(character);
     },
-    "space": function(char) {
-      return /[\t ]/.test(char);
+    "space": function(character) {
+      return /[\t ]/.test(character);
     },
-    "invalidPropChar": function(char) {
-      return !(this.text(char) || this.number(char) || char === "#" || char === ".");
+    "invalidPropChar": function(character) {
+      return !(this.text(character) || this.number(character) || character === "#" || character === ".");
     }
   };
 
@@ -343,7 +343,7 @@ lces.rc[4] = function() {
             var cursorOff = index - stringOff;
             var string = string.substr(stringOff, stringEnd).replace("\n", " ");
           
-            this.tokens  = "Invalid property character \"" + c + "\" at char index " + index +  " \n\n";
+            this.tokens  = "Invalid property character \"" + c + "\" at character index " + index +  " \n\n";
             this.tokens += "\"" + string + "\" \n";
             this.tokens += " " + (new Array(cursorOff < 0 ? 0 : cursorOff)).join(" ") + " ^";
             
