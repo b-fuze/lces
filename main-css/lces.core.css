@@ -245,6 +245,8 @@ input.lces.lces-numberfield {
 
 .lces-slider {
 	position: relative;
+	top: -3px;
+	vertical-align: middle;
 	display: inline-block;
 	border: 2px solid #000;
 	border-radius: 5px;
@@ -311,7 +313,8 @@ input.lces.lces-numberfield {
 
 .lces-colorchooser {
 	position: relative;
-	top: 10px;
+	top: -3px;
+	vertical-align: middle;
 	display: inline-block;
 }
 
@@ -562,7 +565,8 @@ input.lces.lces-numberfield {
 
 .lcescheckbox {
 	position: relative;
-	top: 1px;
+	top: -3px;
+	vertical-align: middle;
 	width: 12px;
 	height: 11px;
 	margin: 2px;
@@ -586,6 +590,9 @@ input.lces.lces-numberfield {
 
 .lcesdropdown {
 	position: relative;
+	vertical-align: middle;
+	top: -3px;
+	margin: 0px;
 	display: inline-block;
 	min-width: 98px;
 	padding: 3px;
@@ -598,7 +605,7 @@ input.lces.lces-numberfield {
 	line-height: 1.2;
 	background: #fff;
 	cursor: default;
-	margin: 0px 0px 10px 0px;
+	/*margin: 0px 0px 10px 0px;*/
 }
 
 .lcesdropdown .lcesdropdown-arrow {
@@ -610,6 +617,7 @@ input.lces.lces-numberfield {
 }
 
 .lcesdropdown .lcesdropdown-arrow svg {
+	position: absolute;
 	transform: scaleY(1.2);
 }
 
