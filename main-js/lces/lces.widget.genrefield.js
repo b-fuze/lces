@@ -335,7 +335,7 @@ lces.rc[9] = function() {
         jSh.c("span", undf, genreName), // Genre name container
         jSh.d(undf, undf, removeSVG.cloneNode(true)), // SVG Close Button
         jSh.c("aside", undf, ","),      // Comma separator
-        jSh.c("section"),               // Dropcatcher to handle all drops
+        jSh.c("section")                // Dropcatcher to handle all drops
       ], undf, {draggable: true}));
       
       var genreValue = ((value !== undf ? value : genreName) + "").toLowerCase();

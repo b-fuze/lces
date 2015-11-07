@@ -2,7 +2,7 @@ lces.rc[10] = function() {
   // lces colorize global variable
   lces.css = {};
 
-  // lces.css.colorizeCSS(css, r, g, b)
+  // lces.css.colorize(css, r, g, b)
   //
   // css: String with CSS style rules
   // r, g, b: Red/Green/Blue Channel values with 0-255 range
@@ -16,7 +16,7 @@ lces.rc[10] = function() {
     var hexNum = function(n) {return (parseInt(n, 16) < 17 ? "00".substr(n.length) : "") + n + (parseInt(n, 16) > 16 ? "00".substr(n.length) : "");};
     var hex = "#" + hexNum(r.toString(16)) + hexNum(g.toString(16)) + hexNum(b.toString(16));
     
-    // Parse and dump CSS
+    // Filter and dump CSS
     css = css.replace(/rgb(a?)\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*((?:,\s*\d{1}(?:\.\d+)?\s*)?)\)/gi, "rgb$1(" + r + ", " + g + ", " + b + "$2)");
     return css.replace(/:\s*#(?:[\d\w]{3}|[\d\w]{6})\s*;/gi, ": " + hex + ";");
   }

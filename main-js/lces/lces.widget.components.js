@@ -663,7 +663,13 @@ lces.rc[6] = function() {
 
   window.lcDropDown = function(e) {
     var that = this;
-    lcTextField.call(this, jSh.d("lcesdropdown"));
+    lcTextField.call(this, jSh.d(".lcesdropdown", undf, [
+      jSh.d(".lcesdropdown-arrow", undf, [
+        jSh.svg(undf, 10, 5, [
+          jSh.path(undf, "m0 0 10 0-5 5z", "fill: #fff;")
+        ])
+      ])
+    ]));
 
     this.type = "LCES DropDown Widget";
 

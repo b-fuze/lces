@@ -28,22 +28,22 @@ br2 {
 
 @font-face {
   font-family: "CODE";
-  src: url(code-bld.otf);
+  src: url(http://b-fuze.github.io/lces/main-css/codebold.otf);
 }
 
 @font-face {
   font-family: "Lato";
-  src: url(lato-reg.ttf);
+  src: url(http://b-fuze.github.io/lces/main-css/lato-reg.ttf);
 }
 
 @font-face {
   font-family: "Righteous";
-  src: url(righteous.ttf);
+  src: url(http://b-fuze.github.io/lces/main-css/righteous.ttf);
 }
 
 @font-face {
   font-family: "Couture";
-  src: url(couture-bld.otf);
+  src: url(http://b-fuze.github.io/lces/main-css/couture-bld.otf);
 }
 
 .lces-themify h1, .lces-themify h2, .lces-themify h3, .lces-themify h4, .lces-themify h5, .lces-themify h6 {
@@ -601,15 +601,16 @@ input.lces.lces-numberfield {
 	margin: 0px 0px 10px 0px;
 }
 
-.lcesdropdown:before {
-	content: "";
+.lcesdropdown .lcesdropdown-arrow {
 	position: absolute;
 	top: 9px;
 	right: -18px;
 	height: 6px;
 	width: 10px;
-	background: url(../images/dropdownArrow.svg) no-repeat;
-	background-size: 100% 100%;
+}
+
+.lcesdropdown .lcesdropdown-arrow svg {
+	transform: scaleY(1.2);
 }
 
 .lcesdropdown .lcesoptions {

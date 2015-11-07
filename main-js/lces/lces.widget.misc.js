@@ -216,7 +216,7 @@ lces.rc[4] = function() {
       update: function() {
         
       }
-    },
+    }
   };
 
 

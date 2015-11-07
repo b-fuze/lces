@@ -98,7 +98,7 @@ lces.rc[7] = function() {
         jSh.dm(".lces-cc-row.lces-cc-value", undf, [
           jSh.dm(".lces-cc-label", "V"),
           lcSlider({min: 0, max: 100, hideValue: true})
-        ]),
+        ])
       ])
     ])
   ])});
