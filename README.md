@@ -28,8 +28,9 @@ loadAll("js",
     lces.rc.forEach(function(i) {i();});
     lces.loadedDeps = true;
     
-    // If your code runs after the page is loaded, you won't need this
+    // If your code runs after the page is loaded, you won't need this event listener
     window.addEventListener("load", function() {
+      // Start LCES
       lces.init();
       
       // LCES is now loaded, now do magic :D
