@@ -30,6 +30,8 @@ loadAll("js",
     
     // If your code runs after the page is loaded, you won't need this
     window.addEventListener("load", function() {
+      lces.init();
+      
       // LCES is now loaded, now do magic :D
     });
   }
