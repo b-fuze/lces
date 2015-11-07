@@ -1,7 +1,44 @@
 # LCES
 LCES, the Linked Component Event System, is a Javascript library that features custom styled elements with a sophisticated state system, a templating system, dynamicText for dynamicly updating content what/wherever it may be, and more.
 
+## Including LCES
 
+Add the following code to your page:
+
+```javascript
+// A quick little utility for loading a bunch of js/css files at once
+function loadAll(k){function l(b){var a=document.createElement("script");a.type="text/javascript";a.onload=function(){d.push(b);g()};e.appendChild(a);a.src=b;return a}function m(b){var a=document.createElement("link");a.rel="stylesheet";a.type="text/css";a.onload=function(){d.push(b);g()};e.appendChild(a);a.href=b;return a}function g(){d.length===c.length&&f&&f()}var e=document.getElementsByTagName("head")[0];var d=[],h=[],c=Array.prototype.slice.call(arguments).slice(1),f;"function"===typeof c[c.length-1]&&(f=c.pop());switch(k){case "js":c.forEach(function(b){h.push(l(b))});break;case "css":c.forEach(function(b){h.push(m(b))})}};
+
+// LCES main function that holds everything
+function lces(lcesname) {
+  return LCES.components[lcesname];
+}
+
+// LCES rc for the init sequence
+lces.rc = new Array(13);
+lces.loadedDeps = false;
+
+// Load LCES and any other JS deps you want
+loadAll("js",
+  "http://b-fuze.github.io/lces/main-js/lces-min/lces.min.current.js",
+  // Can add more JS files to load here
+  function() {
+    // This callback is called when all the previously listed js are loaded
+    // lces.rc will hold each LCES component in their correct init order
+    lces.rc.forEach(function(i) {i();});
+    lces.loadedDeps = true;
+    
+    // If your code runs after the page is loaded, you won't need this event listener
+    window.addEventListener("load", function() {
+      // Start LCES
+      lces.init();
+      
+      // LCES is now loaded, now do magic :D
+    });
+  }
+);
+
+```
 
 ## LCES Widget
 
@@ -117,7 +154,7 @@ An LCES state. Returns the input value, and assigning will change it.
 
 #### input.blur();
 
-# `new lcTextArea([Textarea Element])` functions the same way
+`new lcTextArea([Textarea Element])` functions the same way
 
 ### new lcNumberField([Input Element]);
 
