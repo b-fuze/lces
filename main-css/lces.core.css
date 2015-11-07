@@ -254,6 +254,7 @@ input.lces.lces-numberfield {
 	width: 138px;
 	overflow: hidden;
 	background: #fff;
+	line-height: normal;
 }
 
 .lces-slider-min, .lces-slider-max, .lces-slider-value {
