@@ -173,6 +173,10 @@ lces-placeholder {
 	font-style: normal;
 }
 
+input.lces[type="text"], input.lces[type="password"] {
+	vertical-align: middle;
+}
+
 input.lces[type="text"], input.lces[type="password"], textarea.lces	 {
 	padding: 3px;
 	min-width: 150px;
@@ -428,6 +432,10 @@ input.lces.lces-numberfield {
 
 /* LCES Fileupload widget */
 
+.lces-file * {
+	cursor: pointer !important;
+}
+
 .lces-file input[type="file"] {
 	position: absolute;
 	margin: 0px;
@@ -566,10 +574,10 @@ input.lces.lces-numberfield {
 
 .lcescheckbox {
 	position: relative;
-	top: -3px;
+	/*top: -3px;*/
 	vertical-align: middle;
-	width: 12px;
-	height: 11px;
+	width: 14px;
+	height: 14px;
 	margin: 2px;
 	display: inline-block;
 }
