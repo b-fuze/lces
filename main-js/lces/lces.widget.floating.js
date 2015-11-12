@@ -184,6 +184,41 @@ lces.rc[8] = function() {
         window.removeEventListener("resize", that.onWinResize);
     });
     
+    this.setState("width", 1);
+    this.addStateListener("width", function(width) {
+      width = !width ? width : parseInt(width);
+      
+      if (!width || isNaN(width) || width < 0) {
+        that.style.width = "auto";
+        this.stateStatus = "auto";
+      } else {
+        that.style.width = width + "px";
+        this.stateStatus = width;
+      }
+    });
+    
+    this.setState("height", 1);
+    this.addStateListener("height", function(height) {
+      height = !height ? height : parseInt(height);
+      
+      if (!height || isNaN(height) || height < 0) {
+        that.style = {
+          height: "auto",
+          overflow: "initial"
+        };
+        
+        this.stateStatus = "auto";
+      } else {
+        that.style.height = height + "px";
+        that.style.overflow = "auto";
+        
+        this.stateStatus = height;
+      }
+    });
+    
+    // Normalize the dimensions
+    this.width  = null;
+    this.height = null;
     
     // Now check for properties in the attributes
     if (e) {
@@ -219,13 +254,12 @@ lces.rc[8] = function() {
       
       // Check for width property
       if (attrWidth !== null) {
-        this.style.width = e.getAttribute("width") + "px";
+        this.width = e.getAttribute("width");
       }
       
       // Check for height property
       if (attrHeight !== null) {
-        this.style.height = e.getAttribute("height") + "px";
-        this.style.overflow = "auto";
+        this.height = e.getAttribute("height");
       }
       
       // Check for title option

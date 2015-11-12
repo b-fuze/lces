@@ -646,7 +646,7 @@ lces.rc[9] = function() {
     
     
     // 'Edit This' icon
-    var genreEditIcon = jSh(".editpropertysvg")[0] ? new lcWidget(jSh.d("editpropertyicon", undf, jSh(".editpropertysvg")[0].cloneNode())) : new lcWidget();
+    var genreEditIcon = jSh(".editpropertysvg")[0] ? new lcWidget(jSh.d("editpropertyicon", undf, jSh(".editpropertysvg")[0].cloneNode(true))) : new lcWidget();
     
     genreEdit.element.insertBefore(genreEditIcon.element, genreList.element);
     genreEditIcon.style = {

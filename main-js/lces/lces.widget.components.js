@@ -237,6 +237,7 @@ lces.rc[6] = function() {
     var input = e || jSh.c("input", {properties: {type: "file"}});
     if (input.parentNode)
       input.parentNode.insertBefore(this.element, input);
+    
     this.element.appendChild(input);
     this.input = input;
     
@@ -263,15 +264,31 @@ lces.rc[6] = function() {
       textDisplay.textContent = display;
     }
     
+    // Input events
+    var inputEvents = ["change", "input", "focus", "blur", "click"];
+    
+    // Add event listener wrapper
+    var _addListener = this.addEventListener;
+    this.addEventListener = function(event, cb) {
+      event = (event + "").toLowerCase();
+      
+      if (inputEvents.indexOf(event) !== -1)
+        that.input.addEventListener(event, cb);
+      else
+        that.addEventListener(event, cb);
+    }
+    
+    // Upload
     this.upload = function(url, keys, progressCb, readystatechangeCb) {
       var form = new lcForm();
+      form.append(that.input);
       
       // Get keys from input elements
       if (jSh.type(keys) === "array")
         keys.forEach(function(i) {form.append(i);});
       
       // Create FormData
-      var fd = new FormData(form);
+      var fd = new FormData(form.element);
       
       // Get keys from object properties
       if (jSh.type(keys) === "object")
@@ -294,6 +311,12 @@ lces.rc[6] = function() {
           callback.call(this, e);
         });
       }
+      
+      // Commence upload
+      req.send();
+      
+      // Put input back in component
+      that.append(that.input);
       
       return req;
     }

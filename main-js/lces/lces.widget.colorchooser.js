@@ -61,7 +61,7 @@ lces.rc[7] = function() {
 
   // Color chooser template
 
-  lces.ui.colorChooserTemplate = lces.template({render: jSh.dm("lces-colorchooser visible", undf, [
+  lces.ui.colorChooserTemplate = lces.template({render: jSh.dm(".lces-colorchooser.visible", undf, [
     jSh.dm(".lces-cc-display", undf, [
       jSh.dm(".lces-cc-color")
     ]),
@@ -88,8 +88,15 @@ lces.rc[7] = function() {
   ])});
 
   window.lcColorChooser = function(refElm) {
+    // Check if called as a template child
+    var isTemplChild = checkTemplateChild(arguments, this);
+    if (isTemplChild)
+      return isTemplChild;
+    
+    // Inherit textfield traits
     lcTextField.call(this);
     
+    // Check for main color chooser modal container
     var ccmContainer = jSh("#lces-colorchoosermodalcontainer");
     
     if (!ccmContainer) {
