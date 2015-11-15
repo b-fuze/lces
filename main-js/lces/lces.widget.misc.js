@@ -989,20 +989,30 @@ lces.rc[4] = function() {
 
 
   // LCES Resizing Event
-
-  lces.ui.setState("resize", 0);
-  lces.ui._resizeTimeout = null;
-
-  window.addEventListener("resize", function() {
-    if (lces.ui._resizeTimeout)
-      clearTimeout(lces.ui._resizeTimeout);
+  lces.ui.addEvent("resize");
+  
+  var resizeTimeout = null;
+  var oldWidth  = 0;
+  var oldHeight = 0;
+  
+  lces.ui.assertResized = function(e, init) {
+    if (resizeTimeout) {
+      clearTimeout(resizeTimeout);
+    } else if (!init) {
+      oldWidth  = innerWidth;
+      oldHeight = innerHeight;
+    }
     
-    lces.ui._resizeTimeout = setTimeout(function() {
-      lces.ui.setState("resize", innerWidth, true);
-    }, 500);
-  });
-
-
+    resizeTimeout = setTimeout(function() {
+      lces.ui.triggerEvent("resize", {oldWidth: oldWidth, oldHeight: oldHeight, width: innerWidth, height: innerHeight});
+      
+      resizeTimeout = null;
+    }, init ? 0 : 500);
+  }
+  
+  window.addEventListener("resize", lces.ui.assertResized);
+  
+  
   // LCES Mobile
   //
   // Anchor all state listeners for mobile to
