@@ -314,7 +314,7 @@ lces.rc[3] = function() {
             if (child.nodeType === Node.ELEMENT_NODE) {
               loopAttrs(child);
               loopChildren(jSh.toArr(child.childNodes), child);
-            } else {
+            } else if (child.nodeType === Node.TEXT_NODE) {
               // No need for dynamic whitespace...
               if (child.nodeValue.trim() === "")
                 return;
