@@ -141,15 +141,15 @@ var input = new lcTextField();
 
 ### lcTextField Properties
 
-#### input.value
-
-An LCES state. Returns the input value, and assigning will change it. 
+ * #### input.value
+   
+   An LCES state. Returns the input value, and assigning will change it. 
 
 ### lcTextField Methods
 
-#### input.focus();
-
-#### input.blur();
+ * #### input.focus();
+   
+ * #### input.blur();
 
 `new lcTextArea([Textarea Element])` functions the same way
 
