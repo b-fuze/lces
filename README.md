@@ -581,28 +581,28 @@ Returns a `DOMNode` <div> element created with the arguments provided. Aims to b
 
 *All of the arguments may be omitted by substituting undf (undefined) in their place*
 
-**idAndClass** - A string that contains the id and classname.
+ * **idAndClass** - A string that contains the id and classname.
 
-Valid formats are:
- * `"#id.class"`
- * `"#id.class.class.class"` - No limit on class count
- * `"#id"`
- * `".class.class"`
+   Valid formats are:
+    * `"#id.class"`
+    * `"#id.class.class.class"` - No limit on class count
+    * `"#id"`
+    * `".class.class"`
 
-**content** - The textContent of the element. To make it innerHTML instead use the `ih()` function:
+ * **content** - The textContent of the element. To make it innerHTML instead use the `ih()` function:
 ```javascript```
 jSh.d(..., ih("<img src=\"url.com\"/>"), ...);
 ```
 
-**child** - Either a `DOMNode` or array of `DOMNodes`
+ * **child** - Either a `DOMNode` or array of `DOMNodes`
 
-**attributes** - Object with properties and their values for the element's attributes.
+ * **attributes** - Object with properties and their values for the element's attributes.
 
-**properties** - Object with properties to be mapped the to the element created.
+ * **properties** - Object with properties to be mapped the to the element created.
 
 ### 2 - jSh.d(options);
 
-**Options** - Optional. Object containing alternative properties for all the arguments above.
+ * **Options** - Optional. Object containing alternative properties for all the arguments above.
 
 Format:
 ```javascript
@@ -643,29 +643,29 @@ var div = jSh.d({
 
 ### jSh.c(tagName, args...);
 
-**tagName** - String. Name of the element's tag name, like `img`, `div`, `button`, and so forth.
+ * **tagName** - String. Name of the element's tag name, like `img`, `div`, `button`, and so forth.
 
-**args** - Optional. The same arguments as `jSh.d()`.
+ * **args** - Optional. The same arguments as `jSh.d()`.
 
 ### jSh.svg(idAndClass, width, height, path);
 
 Creates an SVG element with it's paths that is normally a pain to achieve.
 
-**idAndClass** - Id or class with the same format as `jSh.d();`
+ * **idAndClass** - Id or class with the same format as `jSh.d();`
 
-**width** - Width of SVG in pixels
+ * **width** - Width of SVG in pixels
 
-**height** - Height of SVG in pixels
+ * **height** - Height of SVG in pixels
 
-**path** - Either one path or array of paths created with `jSh.path();`
+ * **path** - Either one path or array of paths created with `jSh.path();`
 
 ### jSh.path(idAndClass, points, style);
 
-**idAndClass** - Id or class with the same format as `jSh.d();`
+ * **idAndClass** - Id or class with the same format as `jSh.d();`
 
-**points** - SVG points, see example.
+ * **points** - SVG points, see example.
 
-**style** - Style attribute. See example.
+ * **style** - Style attribute. See example.
 
 #### Example
 ```javascript
@@ -679,9 +679,9 @@ jSh.svg(".svg-triangle", 15, 15, [
 
 Copies the own properties from `extension` to `extended`.
 
-**extended** - Object to be extended.
+ * **extended** - Object to be extended.
 
-**extension** - Object with own properties to be copied to the extended.
+ * **extension** - Object with own properties to be copied to the extended.
 
 #### Example
 ```javascript
@@ -702,7 +702,7 @@ lces.types["textfield"] = lcTextField;
 
 Converts any array-like object into an array. e.g. `Element.childNodes`, the function scope `arguments` object, `strings`, and more.
 
-**arraylikeobject** - Any array-like data.
+ * **arraylikeobject** - Any array-like data.
 
 #### Example
 ```javascript
@@ -715,11 +715,12 @@ jSh.toArr(arguments).forEach(function(argument) {
 
 Returns the correct type of `data`, e.g. `"null"` for `null` instead of `"object"` etc. 
 
-**data** - Anything.
+ * **data** - Anything.
 
 ### jSh.nChars(string, n);
 
 Returns `string` multiplied `n` times.
 
-**string** - String. String to be multiplied.
-**n** - Number. Number of times to multiply string.
+ * **string** - String. String to be multiplied.
+
+ * **n** - Number. Number of times to multiply string.
