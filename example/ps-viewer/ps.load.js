@@ -55,6 +55,7 @@ loadAll("js",
         main.imageSrc = basePath + pattern.replace("$1", padding.substr((number + "").length) + number);
         main.currentPage = "Page " + number;
         
+        // Update the title in the browser with new page number
         jSh("title")[0].innerHTML = titleText + "page " + number;
       });
       
