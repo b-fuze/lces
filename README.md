@@ -1,5 +1,5 @@
 # LCES
-LCES, the Linked Component Event System, is a Javascript library that features custom styled elements with a sophisticated state system, a templating system, dynamicText for dynamicly updating content what/wherever it may be, and more.
+LCES, the Linked Component Event System, is a Javascript library that features custom styled elements with a sophisticated state system, a templating system, dynamicText for dynamically updating content no matter what/where it may be, and more.
 
 ## Including LCES
 
@@ -7,33 +7,30 @@ Add the following code to your page:
 
 ```javascript
 // A quick little utility for loading a bunch of js/css files at once
-function loadAll(k){function l(b){var a=document.createElement("script");a.type="text/javascript";a.onload=function(){d.push(b);g()};e.appendChild(a);a.src=b;return a}function m(b){var a=document.createElement("link");a.rel="stylesheet";a.type="text/css";a.onload=function(){d.push(b);g()};e.appendChild(a);a.href=b;return a}function g(){d.length===c.length&&f&&f()}var e=document.getElementsByTagName("head")[0];var d=[],h=[],c=Array.prototype.slice.call(arguments).slice(1),f;"function"===typeof c[c.length-1]&&(f=c.pop());switch(k){case "js":c.forEach(function(b){h.push(l(b))});break;case "css":c.forEach(function(b){h.push(m(b))})}};
+function loadAll(k){function l(b){var a=document.createElement("script");a.async=true;a.type="text/javascript";a.onload=function(){d.push(b);g()};e.appendChild(a);a.src=b;return a}function m(b){var a=document.createElement("link");a.rel="stylesheet";a.type="text/css";a.onload=function(){d.push(b);g()};e.appendChild(a);a.href=b;return a}function g(){d.length===c.length&&f&&f()}var e=document.getElementsByTagName("head")[0];var d=[],h=[],c=Array.prototype.slice.call(arguments).slice(1),f;"function"===typeof c[c.length-1]&&(f=c.pop());switch(k){case "js":c.forEach(function(b){h.push(l(b))});break;case "css":c.forEach(function(b){h.push(m(b))})}};
 
-// LCES main function that holds everything
+// LCES main function that holds everything & LCES rc for the init sequence
 function lces(lcesname) {
   return LCES.components[lcesname];
 }
 
-// LCES rc for the init sequence
-lces.rc = new Array(13);
+lces.rc = [];
 lces.loadedDeps = false;
 
-// Load LCES and any other JS deps you want
 loadAll("js",
   "http://b-fuze.github.io/lces/main-js/lces-min/lces.min.current.js",
   // Can add more JS files to load here
   function() {
-    // This callback is called when all the previously listed js are loaded
+    // This callback is called when all the previously listed js files are loaded
     // lces.rc will hold each LCES component in their correct init order
     lces.rc.forEach(function(i) {i();});
     lces.loadedDeps = true;
     
     // If your code runs after the page is loaded, you won't need this event listener
     window.addEventListener("load", function() {
-      // Start LCES
-      lces.init();
+      lces.init(); // Start LCES
       
-      // LCES is now loaded, now do magic :D
+      // LCES is loaded, now do magic :D
     });
   }
 );
@@ -170,31 +167,31 @@ var numField = new lcNumberField();
 
 ### lcNumberField Properties
 
-#### numField.value
+ * #### numField.value
+  
+  LCES state. Number.
 
-LCES state. Number.
+ * #### numField.min
+   
+   LCES state. Number.
 
-#### numField.min
+ * #### numField.max
+   
+   LCES state. Number.
 
-LCES state. Number.
+ * #### numField.digits
+   
+   LCES state. Number.
 
-#### numField.max
+ * #### numField.integer
+   
+ * LCES state. Boolean. If false, won't accept any decimal values.
 
-LCES state. Number.
+ * #### numField.decimalPoints
+   
+   LCES state. Number.
 
-#### numField.digits
-
-LCES state. Number.
-
-#### numField.integer
-
-LCES state. Boolean. If false, won't accept any decimal values.
-
-#### numField.decimalPoints
-
-LCES state. Number.
-
-### new lcFileInput([Input Element]);
+ ### new lcFileInput([Input Element]);
 
 *HTML:*
 ```HTML
@@ -207,13 +204,13 @@ var file = new lcFileInput();
 ```
 
 #### file.upload(url, keys, progress, readystatechange);
-**url** - String. Upload url
+ * **url** - String. Upload url
 
-**keys** - Optional. Either array of input elements (lcWidget wrappers allowed), or normal key-value object to be included in the request. If omitted, substitute with any falsy value to use the following arguments.
+ * **keys** - Optional. Either array of input elements (lcWidget wrappers allowed), or normal key-value object to be included in the request. If omitted, substitute with any falsy value to use the following arguments.
 
-**progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent). If omitted, substitute with any falsy value.
+ * **progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent). If omitted, substitute with any falsy value.
 
-**readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
+ * **readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
 
 ### new lcCheckBox([Input Element]);
 
@@ -228,9 +225,9 @@ var chkBox = new lcCheckBox();
 ```
 ### lcCheckBox Properties
 
-#### chkBox.checked
+ * #### chkBox.checked
 
-LCES State. Boolean.
+ * LCES State. Boolean.
 
 
 ### new lcDropDown([Select Element]);
@@ -248,15 +245,15 @@ LCES State. Boolean.
 var dropDown = new lcDropDown();
 ```
 
-#### dropDown.addOption(value, content);
+ * #### dropDown.addOption(value, content);
 
-**value** - Either a `number` or `string`.
+   **value** - Either a `number` or `string`.
+   
+   **content** - Either a `string`, `DOMNode`, or `lcWidget`.
 
-**content** - Either a `string`, `DOMNode`, or `lcWidget`.
-
-#### dropDown.removeOption(option);
-
-**option** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### dropDown.removeOption(option);
+   
+   **option** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 ### new lcTable([Table Element]);
 
@@ -288,25 +285,25 @@ var dropDown = new lcDropDown();
 var table = new lcTable();
 ```
 
-#### table.setHeadings(headings);
-**headings** - Array of headings, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+ * #### table.setHeadings(headings);
+  **headings** - Array of headings, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
 
-#### table.addHeading(heading);
-**heading** - Either a `string`, `DOMNode`, or `lcWidget`.
+ * #### table.addHeading(heading);
+   **heading** - Either a `string`, `DOMNode`, or `lcWidget`.
 
-#### table.removeHeading(heading);
-**heading** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### table.removeHeading(heading);
+   **heading** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-#### table.addRow(content);
-**content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+ * #### table.addRow(content);
+   **content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
 
-#### table.removeRow(row);
-**row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### table.removeRow(row);
+   **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-#### table.insertBeforeRow(content, row);
-**content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
-
-**row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### table.insertBeforeRow(content, row);
+   **content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+   
+   **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 ### new lcAccordion([Reference Element]);
 
@@ -329,25 +326,25 @@ var accordion = new lcAccordion();
 
 ### lcAccordion Properties
 
-#### accordion.sectionHeight
+ * #### accordion.sectionHeight
+   
+   Number. Section open height in pixels
 
-Number. Section open height in pixels
+ * #### accordion.sectionsCloseable
+   
+   Boolean. If true, clicking section titles will toggle them opening or closing
 
-#### accordion.sectionsCloseable
-
-Boolean. If true, clicking section titles will toggle them opening or closing
-
-#### accordion.maxOpen
-
-LCES state. Number. Maximum sections tht can be opened at a time.
+ * #### accordion.maxOpen
+   
+   LCES state. Number. Maximum sections tht can be opened at a time.
 
 ### lcAccordion Methods
 
-#### accordion.addSection(title, content);
-
-**title** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
-
-**content** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
+ * #### accordion.addSection(title, content);
+   
+   **title** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
+   
+   **content** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
 
 ### new lcColorChooser([Reference Element]);
 
@@ -363,9 +360,9 @@ The attribute `color` is optional.
 var color = new lcColorChooser();
 ```
 
-#### color.value
-
-LCES state. Array of three numerical 0-255 values representing RGB in that order respectively.
+ * #### color.value
+   
+   LCES state. Array of three numerical 0-255 values representing RGB in that order respectively.
 
 ### new lcSlider([Reference Element]);
 
@@ -383,17 +380,45 @@ var slider = new lcSlider();
 
 ### Slider Properties
 
-#### slider.min
+ * #### slider.min
+   
+   LCES state. Number. Minimum value for the slider
 
-LCES state. Number. Minimum value for the slider
+ * #### slider.max
+   
+   LCES state. Number. Maximum value for the slider
 
-#### slider.max
+ * #### slider.hideValue
+   
+   LCES state. Boolean. If true, will hide the value on the slider
 
-LCES state. Number. Maximum value for the slider
+### new lcWindow([Reference Element]);
 
-#### slider.hideValue
+*HTML:*
+```HTML
+<lces-widget type="window" name="aucp-animeupdates" lces-visible="false" width="500" height="300" centered title-visible="false" buttonpanel-visible="true">
+  <lces-title>Window Title</lces-title>
+  
+  <lces-contents>
+    <!-- The contents of the window -->
+  </lces-contents>
+  
+  <lces-buttons>
+          <button onclick="lces('').visible">Close</button>
+  </lces-buttons>
+</lces-widget>
+```
 
-LCES state. Boolean. If true, will hide the value on the slider
+All the attributes are optional except for `type="window"`, the title and buttonpanel are visible by default, even if empty.
+`<lces-contents>` is the only required tag in the window widget.
+
+```javascript
+
+```
+
+### Window properties
+
+ * #### 
 
 
 ## Why I made LCES
