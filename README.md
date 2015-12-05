@@ -621,7 +621,7 @@ var options = {
 // Method 1 - Ordered arguments
 var div = jSh.d("#id.class1.class2", ih("<br/> Some innerHTML..."), [
   jSh.d(undf, "And TextContent here..."),
-  jSh.d(".avatar", undf, jSh.c("img", {prop: {src: "http://somesite.com/image.png"}})),
+  jSh.d(".avatar", undf, jSh.c("img", undf, undf, undf, undf, {src: "http://somesite.com/image.png"})),
   jSh.d(),
   jSh.c("br"),
   jSh.d(undf, ih("<b>It all works.</b>"))
