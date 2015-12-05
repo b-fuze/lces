@@ -1,7 +1,8 @@
 lces.rc[7] = function() {
 
   // Conversion functions
-
+  
+  // RGB Range: 0 - 1
   lces.ui.RGB2HSV = function(r, g, b) {
     // Check if a greyscale color
     if (r === g && g === b)
@@ -89,7 +90,7 @@ lces.rc[7] = function() {
 
   window.lcColorChooser = function(refElm) {
     // Check if called as a template child
-    var isTemplChild = checkTemplateChild(arguments, this);
+    var isTemplChild = lces.template.isChild(arguments, this);
     if (isTemplChild)
       return isTemplChild;
     

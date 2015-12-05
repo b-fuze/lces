@@ -38,9 +38,11 @@ lces.rc[5] = function() {
     // Build new function
     var newFunc = function LCESTemplate(args, appendNodes) {
       if (this instanceof lces.template) {
+        var newContext;
+        
         // Check if dynContext object was provided as args — Élégānce
         if (!args || !(args instanceof lcComponent)) {
-          var newContext = LCESTemplate.context && LCESTemplate instanceof lcComponent ? LCESTemplate.context : new lcWidget();
+          newContext = LCESTemplate.context && LCESTemplate instanceof lcComponent ? LCESTemplate.context : new lcWidget();
           
           if (jSh.type(args) === "object") {
             // Check if LCESTemplate.context was provided as an object that isn't constructed with lcComponent
@@ -86,6 +88,9 @@ lces.rc[5] = function() {
           newContext.element = newElement;
         }
         
+        // Main context reference for encapsulating contexts
+        newElement.mainComponent = newContext || args;
+        
         // If there's an appending function and appendNodes, run function
         if (appendNodes && LCESTemplate.append)
           LCESTemplate.append(appendNodes, newElement);
@@ -130,6 +135,9 @@ lces.rc[5] = function() {
     newFunc.addInit    = lces.template.addInit;
     newFunc.removeInit = lces.template.removeInit;
     
+    // Add init function if any
+    newFunc.addInit(options.init);
+    
     newFunc.context = options.context;
     
     // Make the new function instance of lces.template
@@ -137,26 +145,88 @@ lces.rc[5] = function() {
     
     return newFunc;
   }
-
+  
+  /**
+   * Checks whether the constructor is invoked as a child of a template's
+   * MockupElement.
+   *
+   * @param {object} args The arguments passed to the constructor
+   * @param {object} that The this context of the constructor
+   * @returns {boolean} Returns false for a negative assertion, otherwise the newFunction to be appended to the MockupElement
+   */
+  lces.template.isChild = function(args, that) {
+    if (that === window) {
+      var newFunction = function templChild() {
+        if (this !== window) {
+          var newElm = new templChild.templChildFunc();
+          
+          newElm.Component = newElm.component;
+          
+          if (templChild.templChildOptions)
+            jSh.extendObj(newElm, templChild.templChildOptions);
+          
+          return newElm.element;
+        } else {
+          return templChild;
+        }
+      }
+      
+      newFunction.templChildFunc = args.callee;
+      newFunction.templChildOptions = args[0];
+      
+      return newFunction;
+    } else {
+      return false;
+    }
+  }
+  
   // jSh MockupElement Methods
   jSh.MockupElementMethods = {
     // Conversion/Copying functions
     construct: function(deep, clone, dynContext) {
       var that   = this;
-      var newElm = clone ? jSh.MockupElement(this.tagName) : jSh.e(this.tagName);
+      var newElm = clone ? jSh.MockupElement(this.tagName) : jSh.e(this.tagName.toLowerCase());
+      var nsElm  = newElm.nsElm;
       
       // Disallow tags in the dynText compiling
       if (dynContext)
         dynContext.dynText.allowTags = false;
       
       // Set the attributes
+      var checkNSAttr = /^ns:[^:]+:[^]*$/i;
+      
       Object.getOwnPropertyNames(this.attributes).forEach(function(i) {
+        var isNS = checkNSAttr.test(i);
+        
+        var nsURI, nsAttr, oldI = i;
+        
+        if (isNS) {
+          nsURI = i.replace(/^ns:[^:]+:([^]*)$/i, "$1");
+          nsAttr = i.replace(/^ns:([^:]+):[^]*$/i, "$1");
+          
+          i = nsAttr;
+        }
+        
         if (dynContext) {
-          dynContext.dynText.compile(that.attributes[i], function(s) {
-            newElm.setAttribute(i, s);
+          var dynAttr = dynContext.dynText.compile(that.attributes[oldI], function(s) {
+            if (!isNS)
+              newElm.setAttribute(i, s);
+            else
+              newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, s);
           });
-        } else
-          newElm.setAttribute(i, that.attributes[i]);
+          
+          if (!dynAttr) {
+            if (!isNS)
+              newElm.setAttribute(i, that.attributes[i]);
+            else
+              newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, that.attributes[oldI]);
+          }
+        } else {
+          if (!isNS)
+            newElm.setAttribute(i, that.attributes[i]);
+          else
+            newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, that.attributes[oldI]);
+        }
       });
       
       // Add event listeners
@@ -189,7 +259,6 @@ lces.rc[5] = function() {
           var resC = dynContext.dynText.compile(this._textContent, function(s) {
             textNode.textContent = s;
           });
-          // console.log(this._textContent, dynContext, resC);
           
           newElm.appendChild(textNode);
           
@@ -221,8 +290,12 @@ lces.rc[5] = function() {
       });
       
       // Finally add the classNames if any
-      if (this.className)
-        newElm.className = this.className;
+      if (this.className) {
+        if (!nsElm)
+          newElm.className = this.className;
+        else
+          newElm.setAttribute("class", this.className);
+      }
       
       // If deep is true, then traverse all the children
       if (deep) {
@@ -431,6 +504,9 @@ lces.rc[5] = function() {
       attr = attr + "";
       
       this.attributes[attr] = undf;
+    },
+    setAttributeNS: function(nsURI, nsAttr, value) {
+      this.setAttribute("ns:" + nsAttr + ":" + (nsURI ? nsURI : ""), value);
     }
   };
 
@@ -446,11 +522,12 @@ lces.rc[5] = function() {
         classes.forEach(function(i) {
           var exists = classArray.indexOf(i);
           
-          if (add && exists === -1 || !add && exists !== -1)
-          if (add)
-            classArray.push(i);
-          else
-            classArray.splice(i, 1);
+          if (add && exists === -1 || !add && exists !== -1) {
+            if (add)
+              classArray.push(i);
+            else
+              classArray.splice(exists, 1);
+          }
         });
       }
     },
@@ -689,22 +766,51 @@ lces.rc[5] = function() {
         }
       }});
   }
-
+  
+  jSh.svgm = function(className, width, height, paths) {
+    return jSh.cm("ns:svg:http://www.w3.org/2000/svg", className, undf, paths, {
+      "version": "1.1",
+      "width": width,
+      "height": height
+    });
+  }
+  
+  jSh.pathm = function(className, points, style) {
+    return jSh.cm("ns:path:http://www.w3.org/2000/svg", className, undf, undf, {
+      "ns:d:": points,
+      "ns:style:": style || ""
+    });
+  }
+  
   jSh.tm = function textM(text) {
     return jSh.MockupText(text);
   }
-
+  
   // LCES Templating Placeholder element
-
+  
   // Placeholder method for replacing it with a real node or MockupElement
   lces.template.__placeHolderReplace = function(e) {
-    var e = this._determineType(e);
+    var that   = this;
+    var parent = this.parent;
+    var e      = this._determineType(e);
     
-    if (!this.parent)
+    if (!parent)
       return null;
     
-    this.parent.insertBefore(e, this.element);
-    this.parent.removeChild(this.element);
+    parent.insertBefore(e, this.element);
+    
+    // Check for multiple elements
+    if (arguments.length > 1) {
+      var elements = jSh.toArr(arguments).slice(1);
+      
+      elements.forEach(function(i) {
+        parent.insertBefore(i, that.element);
+      });
+    }
+    
+    // Remove placeholder and update substituting property
+    parent.removeChild(this.element);
+    this.substituting = null;
   };
   
   lces.template.__placeHolderSubstitute = function(e) {
@@ -715,6 +821,8 @@ lces.rc[5] = function() {
     
     e.parentNode.insertBefore(this.element, e);
     e.parentNode.removeChild(e);
+    
+    this.substituting = e;
   };
 
   // LCES Placeholder Constructor

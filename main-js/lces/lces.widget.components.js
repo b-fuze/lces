@@ -73,7 +73,7 @@ lces.rc[6] = function() {
 
   window.lcSlider = function(refElm) {
     // Check if called as a template child
-    var isTemplChild = checkTemplateChild(arguments, this);
+    var isTemplChild = lces.template.isChild(arguments, this);
     if (isTemplChild)
       return isTemplChild;
     
@@ -591,11 +591,22 @@ lces.rc[6] = function() {
       }
     }
   }
-
+  
   jSh.inherit(lcRadioButtons, lcGroup);
-
-
+  
+  
+  lces.ui.CheckBoxSVG = jSh.svgm(".checkboxsvg", 14, 13, [
+    jSh.pathm(".checkboxcolor", "M2.6 1 10.4 1C11.3 1 12 1.7 12 2.6l0 7.9C12 11.3 11.3 12 10.4 12L2.6 12C1.7 12 1 11.3 1 10.4L1 2.6C1 1.7 1.7 1 2.6 1z"),
+    jSh.pathm(undf, "m2.6 2.3 7.7 0C10.6 2.3 10.8 2.4 10.8 2.6l0 7.7C10.8 10.6 10.6 10.8 10.4 10.8l-7.7 0C2.4 10.8 2.3 10.6 2.3 10.4l0-7.7C2.3 2.4 2.4 2.3 2.6 2.3z", "fill: #fff;"),
+    jSh.pathm(".checkboxcolor", "M11.5 2.5 11 3.1 5.9 8.2 4.3 6.6 3.8 6.1 2.7 7.1 3.2 7.7 5.3 9.8 5.9 10.3 6.4 9.8 12.1 4.1 12.6 3.6 11.5 2.5z")
+  ]);
+  
   window.lcCheckBox = function(e) {
+    // Check if called as a template child
+    var isTemplChild = lces.template.isChild(arguments, this);
+    if (isTemplChild)
+      return isTemplChild;
+    
     lcTextField.call(this, jSh.d("lcescheckbox"));
     var that = this;
     
@@ -608,15 +619,9 @@ lces.rc[6] = function() {
     } else
       e = {checked: false};
     
-    
-    var svg = jSh.svg(".checkboxsvg", 14, 13, [
-      jSh.path("checkboxcolor", "M2.6 1 10.4 1C11.3 1 12 1.7 12 2.6l0 7.9C12 11.3 11.3 12 10.4 12L2.6 12C1.7 12 1 11.3 1 10.4L1 2.6C1 1.7 1.7 1 2.6 1z"),
-      jSh.path(undf, "m2.6 2.3 7.7 0C10.6 2.3 10.8 2.4 10.8 2.6l0 7.7C10.8 10.6 10.6 10.8 10.4 10.8l-7.7 0C2.4 10.8 2.3 10.6 2.3 10.4l0-7.7C2.3 2.4 2.4 2.3 2.6 2.3z", "fill: #fff;"),
-      jSh.path("checkboxcolor", "M11.5 2.5 11 3.1 5.9 8.2 4.3 6.6 3.8 6.1 2.7 7.1 3.2 7.7 5.3 9.8 5.9 10.3 6.4 9.8 12.1 4.1 12.6 3.6 11.5 2.5z")
-    ]);
+    var svg = lces.ui.CheckBoxSVG.conceive(true);
     
     this.appendChild(svg);
-    
     
     this.setState("checked", false);
     this.addStateListener("checked", function(checked) {
@@ -635,21 +640,32 @@ lces.rc[6] = function() {
     });
 
     this.removeAllStateListeners("focused");
+    
+    this.setState("label", null);
+    this.addStateListener("label", function(label) {
+      if (label && (label.tagName + "").toLowerCase() === "label") {
+        function onClickLabel(e) {
+          that.checked = !that.checked;
+          that.focused = true;
 
-    if (e && e.id) {
-      var labels = LCESLoopLabels();
-
-      function onClickLabel(e) {
-        that.checked = !that.checked;
-        that.focused = true;
-
-        e.preventDefault();
+          e.preventDefault();
+        }
+        
+        // Add listener and component reference
+        label.addEventListener("mousedown", onClickLabel);
+        label.component = that;
       }
-
+    });
+    
+    if (e && e.id) {
+      // Add component reference to reference element
       e.component = this;
+      
+      // Check for associated labels
+      var labels = LCESLoopLabels();
+      
       if (labels[e.id]){
-        labels[e.id].addEventListener("mousedown", onClickLabel);
-        labels[e.id].component = this;
+        this.label = labels[e.id];
       }
     }
   }

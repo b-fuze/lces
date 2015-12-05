@@ -41,7 +41,8 @@ lces.rc[0] = function() {
       if (first)
         new lcWidget(e);
       
-      jSh.shorten(e);
+      if (!e.jSh)
+        jSh.shorten(e);
       
       return e;
     }
@@ -138,12 +139,19 @@ lces.rc[0] = function() {
     } catch (e) {
       console.warn(e);
       
-      result = {error: "JSON parse failed.", data: null};
+      result = {error: "JSON parse failed", data: null};
     }
     
     return result;
   }
-
+  
+  jSh.filterHTML = function(s) {
+    s = s.replace(/&/g, "&amp;");
+    s = s.replace(/</g, "&lt;");
+    s = s.replace(/>/g, "&gt;");
+    return s;
+  }
+  
   // DOM Creation Functions
 
   // Create HTML DOM Div elements with a flexible nesting system
@@ -158,10 +166,10 @@ lces.rc[0] = function() {
         if (!nsCheck)
           var n = jSh.e(this.lcesType);       // Create main element, if this isn't window, set to specified element.
         else {
-          var nsURI = this.lcesType.replace(/^ns:[\w\d_]+:([^]+)$/i, "$1");
+          // var nsURI = this.lcesType.replace(/^ns:[\w\d_]+:([^]+)$/i, "$1"); TODO: Check this
           var nsElm = this.lcesType.replace(/^ns:([\w\d_]+):[^]+$/i, "$1");
           
-          var n = document.createElementNS(nsURI, nsElm);
+          var n = jSh.e(this.lcesType);
         }
       } else {
         var n = jSh.e("div");
@@ -240,13 +248,13 @@ lces.rc[0] = function() {
     if (attributes) {
       for (attr in attributes) {
         if (attributes.hasOwnProperty(attr)) {
-          if (!checkNSAttr.test(attr))
+          if (!checkNSAttr.test(attr) || n instanceof jSh.MockupElement)
             n.setAttribute(attr, attributes[attr]);
           else {
             var nsURI = attr.replace(/^ns:[^:]+:([^]*)$/i, "$1");
             var nsAttr = attr.replace(/^ns:([^:]+):[^]*$/i, "$1");
             
-            n.setAttributeNS(nsURI ? nsURI : null, nsAttr, attributes[attr])
+            n.setAttributeNS(nsURI ? nsURI : null, nsAttr, attributes[attr]);
           }
         }
       }
@@ -283,7 +291,18 @@ lces.rc[0] = function() {
 
   // Create raw DOM element with no special features
   jSh.e = function(tag) {
-    return document.createElement(tag);
+    var nsCheck = /^ns:[\w\d_]+:[^]+$/i.test(tag);
+    if (!nsCheck) {
+      return document.createElement(tag);
+    } else {
+      var nsURI = tag.replace(/^ns:[\w\d_]+:([^]+)$/i, "$1");
+      var nsElm = tag.replace(/^ns:([\w\d_]+):[^]+$/i, "$1");
+      
+      var n = document.createElementNS(nsURI, nsElm);
+      n.nsElm = true;
+      
+      return n;
+    }
   }
 
   // Create an HTML DOM text node
