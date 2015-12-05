@@ -497,7 +497,7 @@ square.addStateListener("width", function(newValue) {
 });
 ```
 
-So in essence, LCES is a getter/setter system with extra features.
+So in essence, LCES is a sophisticated getter/setter system.
 
 
 ## Getting Started with LCES Core
