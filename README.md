@@ -185,7 +185,7 @@ var numField = new lcNumberField();
 
  * #### numField.integer
    
- * LCES state. Boolean. If false, won't accept any decimal values.
+   LCES state. Boolean. If false, won't accept any decimal values.
 
  * #### numField.decimalPoints
    
