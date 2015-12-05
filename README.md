@@ -203,14 +203,14 @@ var numField = new lcNumberField();
 var file = new lcFileInput();
 ```
 
-#### file.upload(url, keys, progress, readystatechange);
- * **url** - String. Upload url
-
- * **keys** - Optional. Either array of input elements (lcWidget wrappers allowed), or normal key-value object to be included in the request. If omitted, substitute with any falsy value to use the following arguments.
-
- * **progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent). If omitted, substitute with any falsy value.
-
- * **readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
+ * #### file.upload(url, keys, progress, readystatechange);
+   **url** - String. Upload url
+   
+   **keys** - Optional. Either array of input elements (lcWidget wrappers allowed), or normal key-value object to be included in the request. If omitted, substitute with any falsy value to use the following arguments.
+   
+   **progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent). If omitted, substitute with any falsy value.
+   
+   **readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
 
 ### new lcCheckBox([Input Element]);
 
@@ -226,8 +226,8 @@ var chkBox = new lcCheckBox();
 ### lcCheckBox Properties
 
  * #### chkBox.checked
-
- * LCES State. Boolean.
+   
+   LCES State. Boolean.
 
 
 ### new lcDropDown([Select Element]);
@@ -413,12 +413,61 @@ All the attributes are optional except for `type="window"`, the title and button
 `<lces-contents>` is the only required tag in the window widget.
 
 ```javascript
-
+var win = new lcWindow();
 ```
 
 ### Window properties
 
- * #### 
+ * #### win.title
+    
+   String. The windows title's InnerHTML.
+
+ * #### win.visible
+    
+   Boolean. The window's visibility.
+
+ * #### win.titleVisible
+    
+   Boolean. The title's visibility.
+
+ * #### win.buttonPanelVisible
+    
+   Boolean. The button panel's visibility.
+
+ * #### win.centered
+    
+   Boolean. If true the window will always be centered in the viewport.
+
+ * #### win.draggable
+    
+   Boolean. If true the window will be draggable from it's title. Only works when win.centered is false.
+
+ * #### win.width
+    
+   Number. The windows innercontent (NOT the window itself) container's overall width.
+
+ * #### win.height
+    
+   Number. The windows innercontent (NOT the window itself) container's overall height.
+
+All the listed properties are LCES states
+
+
+### Window methods
+
+* #### win.addButton(text, click);
+    
+   **text** String. The button's text.
+   
+   **click** Function. Function invoked on click.
+   
+   *Returns* lcWidget wrapped button element.
+
+* #### win.removeButton(button);
+    
+   **button** lcWidget wrapper for the button.
+   
+   *Returns* Nothing.
 
 
 ## Why I made LCES
