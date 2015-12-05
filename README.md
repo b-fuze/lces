@@ -1,7 +1,7 @@
 # LCES
 LCES, the Linked Component Event System, is a Javascript library that features custom styled elements with a sophisticated state system, a templating system, dynamicText for dynamically updating content no matter what/where it may be, and more.
 
-## Including LCES
+## Including LCES in your project
 
 Add the following code to your page:
 
