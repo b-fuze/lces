@@ -78,6 +78,14 @@ br2 {
 	font-size: 1.125em;
 }
 
+.lces-themify .lc-i {
+	font-style: italic;
+}
+
+.lces-themify .lc-b {
+	font-weight: bold;
+}
+
 .lces-themify .lc-centertext {
 	text-align: center;
 }
@@ -137,23 +145,8 @@ lces-placeholder {
 
 /* LCES TextField Styling */
 
-.lces-themify ::-webkit-input-placeholder {
+.lces-themify *::-webkit-input-placeholder, .lces-themify *:-moz-placeholder, .lces-themify *::-moz-placeholder, .lces-themify *:-ms-input-placeholder {
   color: #BFBFBF;
-	font-style: italic;
-	font-weight: normal;
-}
-.lces-themify :-moz-placeholder { /* Firefox 18- */
-  color: #BFBFBF;
-	font-style: italic;
-	font-weight: normal;
-}
-.lces-themify ::-moz-placeholder {  /* Firefox 19+ */
-  color: #BFBFBF;
-	font-style: italic;
-	font-weight: normal;
-}
-.lces-themify :-ms-input-placeholder {
-   color: #BFBFBF;
 	font-style: italic;
 	font-weight: normal;
 }

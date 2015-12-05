@@ -631,6 +631,7 @@ lces.rc[4] = function() {
   //
   // Description: lces.dynText.renderEntities internal mechanism.
   lces.dynText.createRenderedEntities = function CRE(entity, cb) {
+    var component    = this.component;
     var propBase     = this.context;
     var parentEntity = entity.parent;
     
@@ -680,6 +681,9 @@ lces.rc[4] = function() {
             curCtx.states[mainProp].contentProps.forEach(function(i) {
               i.element.innerHTML = lces.dynText.onContentChange(curCtx, i);
             });
+            
+            // Trigger dynProp change event
+            component.triggerEvent("dynpropchange", {property: this.name});
           });
           
           // For 'special' instances
@@ -690,6 +694,9 @@ lces.rc[4] = function() {
             curCtx.states[mainProp].dynamicProps.forEach(function(i) {
               lces.dynText.onDynamicChange(propBase, i);
             });
+            
+            // Trigger dynProp change event
+            component.triggerEvent("dynpropchange", {property: this.name});
           });
         }
         
@@ -932,6 +939,9 @@ lces.rc[4] = function() {
       element: this.element
     };
     
+    // Prop change event
+    this.addEvent("dynpropchange");
+    
     // EXTENDS POSSIBLY EXISTING PROPERTIES/STATES WITH
     // state["dynTextParam"] or state["dynTextContent"]
     
@@ -1029,4 +1039,122 @@ lces.rc[4] = function() {
   }
 
   window.addEventListener("resize", lces.ui.assertMobile);
+  
+  
+  // LCES URL API
+
+  lces.rc[11] = function() {
+    lces.url = new lcComponent();
+
+    // Store the triggers in the order of their appearance
+    // e.g. .com/cp/go/furnitures/chairs
+    //
+    // Format:
+    // url.triggers = {
+    //   cp: {
+    //     go: function(category, type) {
+    //       // Do stuff
+    //     }
+    //   }
+    // }
+    // Or just:
+    // url.triggers = {go: function(category, type) {...}}
+    //
+    // Which is called like this, if like the latter example then no cp.:
+    //  lces.url.cp.go("furnitures", "chairs")
+    lces.url.triggers = {};
+
+    // A count of the triggers in url.triggers
+    lces.url.setState("triggerCount", 0);
+
+    // If true LCESURL will react to popstate events
+    lces.url.setState("acceptChange", false);
+
+
+    // TriggerCount Getter
+    lces.url.states["triggerCount"].get = function() {
+      return Object.getOwnPropertyNames(lces.url.triggers).length;
+    }
+
+    // Events
+    lces.url._onURLChange = function() {
+      var func = lces.url.process();
+      
+      if (!func) {
+        if (jSh.type(lces.url.triggers._default) === "function")
+          lces.url.triggers._default();
+        
+        return false;
+      }
+      
+      func.func.apply(this, func.args);
+    }
+
+    lces.url.addStateListener("acceptChange", function(accept) {
+      if (accept) {
+        window.addEventListener("popstate", lces.url._onURLChange);
+      } else {
+        window.removeEventListener("popstate", lces.url._onURLChange);
+      }
+    });
+
+    // Methods
+    lces.url.process = function() {
+      var url        = location.pathname.substr(1).split("/");
+      var startIndex = null;
+      
+      url.every(function(i, index) {
+        if (lces.url.triggers[i]) {
+          startIndex = index;
+          return false;
+        }
+        
+        return true;
+      });
+      
+      // Check if failed to locate starter object/function
+      if (startIndex === null)
+        return false;
+      
+      
+      var func      = null;
+      var args      = null;
+      var curObject = null;
+      
+      function isFunction(o) {
+        return typeof o === "function";
+      }
+      
+      url.every(function(i, index) {
+        if (index >= startIndex) {
+          var curr = curObject ? curObject[url[index]] : lces.url.triggers[url[index]];
+          
+          if (!curr) {
+            return false;
+          }
+          
+          if (isFunction(curr)) {
+            func = curr;
+            args = url.slice(index + 1);
+            
+            return false;
+          }
+          
+          curObject = curr;
+        }
+        
+        return true;
+      });
+      
+      
+      if (!func)
+        return false;
+      
+      return {func: func, args: args};
+    }
+
+    lces.url.set = function(url) {
+      history.pushState(null, null, url);
+    }
+  }
 }

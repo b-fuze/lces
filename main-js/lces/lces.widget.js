@@ -1,5 +1,31 @@
 // LCES DOM Components
 lces.rc[3] = function() {
+  
+  // TODO: Wrap these for possible conflicts
+  window.ih = function(s) {
+    return {s: s, t: 1}  // Returns 1 for innerHTML
+  };
+
+  window.prefixEvent = function(event, element, callback) {
+    if (jSh.type(event) != "array")
+      event = [event];
+    
+    var prefixes = ["o", "webkit", ""];
+    for (var i=0; i<event.length; i++) {
+      for (var j=0; j<prefixes.length; j++) {
+        element.addEventListener(prefixes[j] + event[i], callback);
+      }
+    }
+    
+  }
+
+  window.onTransitionEnd = function(element, callback) {
+    if (!(element instanceof Node))
+      element = element.element;
+    
+    prefixEvent(["TransitionEnd", "transitionend"], element, callback);
+  }
+  
   // lcFocus: A quick library for managing the focused native DOM and custom LCES elements
   window.lcFocus = function() {
     var that  = this;
@@ -203,7 +229,7 @@ lces.rc[3] = function() {
     }
     
     this.getAttr = function(attr) {
-      this.element.getAttribute(attr);
+      return this.element.getAttribute(attr);
     }
     
     this.removeAttr = function(attr) {
@@ -217,6 +243,7 @@ lces.rc[3] = function() {
     var classList = {
       add: function(c) {that.element.classList.add(c)},
       remove: function(c) {that.element.classList.remove(c)},
+      contains: function(c) {that.element.classList.contains(c)},
       removeAll: function(filter) {that.classList.forEach(function(i) {return filter === undf ? that.classList.remove(i) : (i.indexOf(filter) != -1 ? that.classList.remove(i) : false); })},
       toggle: function(c) {that.element.classList.toggle(c)}
     }
@@ -226,6 +253,7 @@ lces.rc[3] = function() {
       
       list.add = classList.add;
       list.remove = classList.remove;
+      list.contains = classList.contains;
       list.removeAll = classList.removeAll;
       list.toggle = classList.toggle;
       
@@ -256,8 +284,62 @@ lces.rc[3] = function() {
         that.appendChild(i);
       });
     }
+    
+    // Check attributes for flags
+    if (e) {
+      var isDyntext = this.getAttr("lces-dyntext") !== null;
+      
+      if (isDyntext) {
+        // Initialize textual dynamics
+        lcDynamicText.call(this);
+        
+        this.dynText.allowTags = false;
+        this.dynText.element   = null;
+        
+        // Loop attributes
+        function loopAttrs(node) {
+          var attrs = jSh.toArr(node.attributes);
+          attrs.forEach(function(attr) {
+            that.dynText.compile(attr.value + "", function(s) {
+              node.setAttribute(attr.name, s);
+            });
+          });
+        }
+        
+        loopAttrs(this.element);
+        
+        // Iterate children
+        function loopChildren(children, parent) {
+          children.forEach(function(child) {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+              loopAttrs(child);
+              loopChildren(jSh.toArr(child.childNodes), child);
+            } else {
+              // No need for dynamic whitespace...
+              if (child.nodeValue.trim() === "")
+                return;
+              
+              var span = parent.childNodes.length === 1 ? parent : jSh.c("span");
+              span.innerHTML = jSh.filterHTML(child.nodeValue);
+              
+              that.dynText.compile(child.nodeValue + "", function(s) {
+                span.innerHTML = jSh.filterHTML(s);
+              });
+              
+              if (span !== parent) {
+                child.parentNode.insertBefore(span, child);
+                child.parentNode.removeChild(child);
+              }
+            }
+          });
+          
+        }
+        
+        loopChildren(this.children, this.element);
+      }
+    }
   };
-
+  
   // Inherit from lcComponent
   jSh.inherit(lcWidget, lcComponent);
 
@@ -363,32 +445,6 @@ lces.rc[3] = function() {
 
   // LCES global UI related functions and data
   lces.ui = new lcComponent();
-
-  window.checkTemplateChild = function(args, that) {
-    if (that === window) {
-      var newFunction = function templChild() {
-        if (this !== window) {
-          var newElm = new templChild.templChildFunc();
-          
-          newElm.Component = newElm.component;
-          
-          if (templChild.templChildOptions)
-            jSh.extendObj(newElm, templChild.templChildOptions);
-          
-          return newElm.element;
-        } else {
-          return templChild;
-        }
-      }
-      
-      newFunction.templChildFunc = args.callee;
-      newFunction.templChildOptions = args[0];
-      
-      return newFunction;
-    } else {
-      return false;
-    }
-  }
 
   // Append to lces.types
   jSh.extendObj(lces.types, {

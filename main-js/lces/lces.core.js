@@ -1,30 +1,6 @@
 // LCES Core code, depends on jShorts2.js
 
 lces.rc[2] = function() {
-  
-  // TODO: Wrap these for possible conflicts
-  window.ih = function(s) {
-    return {s: s, t: 1}  // Returns 1 for innerHTML
-  };
-
-  window.prefixEvent = function(event, element, callback) {
-    if (jSh.type(event) != "array")
-      event = [event];
-    
-    var prefixes = ["o", "webkit", ""];
-    for (var i=0; i<event.length; i++) {
-      for (var j=0; j<prefixes.length; j++) {
-        element.addEventListener(prefixes[j] + event[i], callback);
-      }
-    }
-    
-  }
-
-  window.onTransitionEnd = function(element, callback) {
-    prefixEvent(["TransitionEnd", "transitionend"], element, callback);
-  }
-
-
   // AUCP LCES JS code (Acronym Galore! :D)
 
   // Some handy tools first...
@@ -486,7 +462,7 @@ lces.rc[2] = function() {
       if (!this.states[state])
         throw ReferenceError("No such state");
       if (jSh.type(listener) !== "function")
-        throw TypeError("Listener " + listener + " not of type 'function'");
+        throw TypeError("Listener " + listener + " is not of type 'function'");
       
       this.states[state].exclusiveFunctions.push(listener);
     },
@@ -845,7 +821,7 @@ lces.rc[2] = function() {
       if (jSh.type(newFunc) !== "function")
         throw TypeError("LCES Init: Init function provided isn't a function");
       
-      var index = priority.indexOf(func);
+      var index = priority.indexOf(oldFunc);
       
       if (index >= 0)
         priority.splice(index, 0, newFunc);

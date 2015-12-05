@@ -220,7 +220,7 @@ lces.rc[8] = function() {
     this.width  = null;
     this.height = null;
     
-    // Now check for properties in the attributes
+    // Check for properties in the attributes
     if (e) {
       // Get attributes
       var attrVisible   = ((e.getAttribute("lces-visible") || e.getAttribute("visible")) + "").toLowerCase();
@@ -296,6 +296,12 @@ lces.rc[8] = function() {
     // Add dynText
     this.dynTextTrigger = "text"; // When the text state changes DynText will recompile
     lcDynamicText.call(this);
+    
+    // Update on dynText property change
+    this.on("dynpropchange", function() {
+      if (that._updateNotifiHeight)
+        that._updateNotifiHeight();
+    });
     
     // Remove/replace some LCES window features
     this.container.classList.add("lces-notification");
@@ -464,14 +470,38 @@ lces.rc[8] = function() {
     // });
     
     this.toggle = function() { // Probably useless... Or not...
-      
+      this.visible = !this.visible;
     }
     
     // Add to notifi group manager
     lces.ui.notifications.addMember(this);
     
+    // Placeholder for height measuring
+    this._ph = jSh.ph().component;
+    
     // Get height for expanding/collapsing animations
-    this.renderedHeight = getComputedStyle(this.container.getChild(0))["height"];
+    this._updateNotifiHeight = function() {
+      if (this.container.parentNode)
+        this._ph.substitute(this.container);
+      
+      // Append to body for guaranteed measurements
+      document.body.appendChild(this.container);
+      
+      // Set temporary styling
+      var oldStyle = getComputedStyle(this.container);
+      this.container.style.display = "block";
+      this.container.getChild(0).style.height = "auto";
+      
+      this.renderedHeight = getComputedStyle(this.container.getChild(0))["height"];
+      
+      // Put the notifi back where it was
+      document.body.removeChild(this.container);
+      
+      if (this._ph.substituting)
+        this._ph.replace(this.container);
+    }
+    
+    this._updateNotifiHeight();
     
     // Remove from DOMTree
     if (this.container.parentNode)
@@ -550,34 +580,37 @@ lces.rc[8] = function() {
     }
     
     this.alignments = {
-      "T": {
+      "T": { // Top
         "L": jSh.d({class: "notification-alignment notifi-left notifi-top lces-themify", properties: {add: addAppend}}),
         "C": jSh.d({class: "notification-alignment notifi-center notifi-top lces-themify", properties: {add: addAppend}}),
         "R": jSh.d({class: "notification-alignment notifi-right notifi-top lces-themify", properties: {add: addAppend}})
       },
-      "M": {
+      "M": { // Middle
         "L": jSh.d({class: "notification-alignment notifi-left notifi-middle lces-themify", properties: {add: addPrepend}}),
         "C": jSh.d({class: "notification-alignment notifi-center notifi-middle lces-themify", properties: {add: addPrepend}}),
         "R": jSh.d({class: "notification-alignment notifi-right notifi-middle lces-themify", properties: {add: addPrepend}})
       },
-      "B": {
+      "B": { // Bottom
         "L": jSh.d({class: "notification-alignment notifi-left notifi-bottom lces-themify", properties: {add: addPrepend}}),
         "C": jSh.d({class: "notification-alignment notifi-center notifi-bottom lces-themify", properties: {add: addPrepend}}),
         "R": jSh.d({class: "notification-alignment notifi-right notifi-bottom lces-themify", properties: {add: addPrepend}})
-      },
+      }, // Relative
       "R": jSh.d({class: "notification-alignment notifi-relative lces-themify", properties: {add: addAppend}})
     };
+    
+    // Reference document body
+    var dBody = document.body;
     
     // Add notifi containers to DOMTree
     [this.alignments["T"], this.alignments["B"], this.alignments["M"]].forEach(function(obj) {
       Object.getOwnPropertyNames(obj).forEach(function(i) {
         if (obj[i])
-          document.body.appendChild(obj[i]);
+          dBody.appendChild(obj[i]);
       });
     });
     
     // Add relative notifi container to DOMTree
-    document.body.appendChild(this.alignments["R"]);
+    dBody.appendChild(this.alignments["R"]);
     this.alignments["R"]["R"] = this.alignments["R"];
     
     // Newmember statechange event fired for every new notifi
