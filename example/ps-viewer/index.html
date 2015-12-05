@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content='width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=2' name='viewport' />
+    <title>PS Viewer</title>
+    
+    <!-- Load deps -->
+    <script type="text/javascript" src="ps.load.js"></script>
+    <link rel="stylesheet" href="main.min.css" media="screen" title="no title" charset="utf-8">
+  </head>
+  <body class="lces-themify">
+    <div class="main" lces-widget lces-name="lc-main" lces-dyntext> <!-- lces-dyntext will make it scan it and it's children for lces-states/properties 
+                                                                         i.e. {#property[.with[.possible[.depth]]]} -->
+      <div class="image-wrap">
+        <img src="{#imageSrc}" alt=""/>
+        <!-- Here I simply used imageSrc, but it could also be img.source which would be accessed from JS
+             as such:   var src = lces("lc-main").img.src;
+             To mutate: lces("lc-main").img.src = "new/image/src.png";
+         -->
+      </div>
+      <div class="buttons">
+        <div class="left-align" lces-widget="control" lces-name="prev-ctrl" disabled>
+          <button lces-widget lces-name="prev-btn">Go Prev</button>
+        </div>
+        <div class="caption">
+          {#currentPage}
+        </div>
+        <div class="right-align">
+          <div lces-widget="control" lces-name="next-ctrl">
+            <button lces-widget lces-name="next-btn">Go Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
