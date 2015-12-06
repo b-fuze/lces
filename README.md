@@ -92,7 +92,7 @@ widget.removeAttr("attribute1", "attribute2", "attribute3");
 
 ## LCES Widget in HTML Markup
 
-You can set elements in your HTML markup to be widgets of a specific type via the `lces-widget` or `type` attribute when the page loads, if you leave it empty LCES will determine the type by itself.
+You can set elements in your HTML markup to be widgets of a specific type via the `lces-widget` or `type` attribute for `<lces-widget>` tags when the page loads, if you leave it empty LCES will determine the type by itself.
 
 ```HTML
 <div lces-widget="widget" lces-name="litter-box">Dirty stuff to change here</div>
