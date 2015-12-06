@@ -18,7 +18,7 @@ lces.rc = [];
 lces.loadedDeps = false;
 
 loadAll("js",
-  "http://b-fuze.github.io/lces/main-js/lces-min/lces.min.current.js",
+  "https://b-fuze.github.io/lces/main-js/lces-min/lces.min.current.js",
   // Can add more JS files to load here
   function() {
     // This callback is called when all the previously listed js files are loaded
