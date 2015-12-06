@@ -191,7 +191,7 @@ var numField = new lcNumberField();
    
    LCES state. Number.
 
- ### new lcFileInput([Input Element]);
+### new lcFileInput([Input Element]);
 
 *HTML:*
 ```HTML
@@ -450,7 +450,7 @@ var win = new lcWindow();
     
    Number. The windows innercontent (NOT the window itself) container's overall height.
 
-All the listed properties are LCES states
+All the listed properties are LCES states.
 
 
 ### Window methods
