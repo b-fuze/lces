@@ -73,8 +73,8 @@ widget.children; // Array of childNodes
 
 // Setting CSS styles, does not change any other properties
 widget.style = {
-  margin: 4,
-  color: "red",
+  margin:  4,
+  color:   "red",
   opacity: 0.5
 }
 
@@ -88,7 +88,7 @@ widget.setAttr("attribute", "value");
 widget.removeAttr("attribute1", "attribute2", "attribute3");
 ```
 
-Is the basic functionality of **lcWidget**, and from it is derived many other components.
+...is the basic functionality of **lcWidget**, and from it is derived many other components.
 
 ## LCES Widget in HTML Markup
 
