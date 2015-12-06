@@ -472,18 +472,18 @@ All the listed properties are LCES states
 
 ## Why I made LCES
 
-LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming in Javascript, the separation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a seperate `setWidth` method: 
+LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming in Javascript, the separation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a separate `setWidth` method: 
 
 ```javascript
 // To get the width
 var width = square.width; // or square.getWidth() if you will
 
-// Use a seperate method to change it
+// Use a separate method to change it
 square.setWidth(width + 2);
 ```
 
 
-This has a few problems, the first being that `width` and `setWidth()` are two seperate things, so if you wanted to add another property, `height` for example, you would make a `height` property AND a `setHeight()` method. Sometimes this is OK, but for simple straightforward properties it can get annoying. And if other things are manipulating them then things can get really hectic.
+This has a few problems, the first being that `width` and `setWidth()` are two separate things, so if you wanted to add another property, `height` for example, you would make a `height` property AND a `setHeight()` method. Sometimes this is OK, but for simple straightforward properties it can get annoying. And if other things are manipulating them then things can get really hectic.
 
 LCES solves this problem by introducing this construct called **states**, similar to normal properties:
 
@@ -535,7 +535,7 @@ function Cat(name) {
   });
 }
 
-// jSh (jShorts) is a seperate library that LCES depends on
+// jSh (jShorts) is a separate library that LCES depends on
 jSh.inherit(Cat, lcComponent); // To inherit prototype chain
 
 var kitty = new Cat("Socks");
@@ -571,7 +571,7 @@ More documation here soon
 
 jSh (jShorts2) is a library created to shorten normal coding procedures, like selecting and creating elements, extending objects, checking real object types, and so on.
 
-### jSh(selector || element);
+### jSh(selector | element);
 
  * **selector** - String. Returns elements located with `selector`.
  
@@ -600,7 +600,9 @@ jSh (jShorts2) is a library created to shorten normal coding procedures, like se
   </div>
 </div>
 ```
-jSh() is chainable, as it adds a .jSh method to it's returned elements:
+
+`jSh()` is chainable, as it adds a `.jSh()` method to it's returned elements:
+
 ```javascript
 jSh("#pet-store")        // <div id="pet-store" ...
 jSh(".pets")             // [<div class="pets"...,  <div class="pets"..., ...]
@@ -612,9 +614,11 @@ jSh("#pet-store").jSh(".details")              // [<div class="details"...,  <di
 jSh("#fish").jSh(".details")[0].textContent    // "1 Available"
 jSh(".pets")[1].jSh(".details")[0].textContent // "5 Available"
 ```
-Calling jSh with an element as an argument simply add a .jSh method and returns the element:
-```javascript
 
+Calling `jSh()` with an element as an argument simply adds a `.jSh()` method and returns the element:
+
+```javascript
+jSh(document.body).jSh(".pets")[0] // <div class="pets" id="cats"...
 ```
 
 
@@ -633,7 +637,7 @@ Returns a `DOMNode` <div> element created with the arguments provided. Aims to b
     * `".class.class"`
 
  * **content** - The textContent of the element. To make it innerHTML instead use the `ih()` function:
-```javascript```
+```javascript
 jSh.d(..., ih("<img src=\"url.com\"/>"), ...);
 ```
 
