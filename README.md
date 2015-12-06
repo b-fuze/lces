@@ -472,7 +472,7 @@ All the listed properties are LCES states
 
 ## Why I made LCES
 
-LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming in Javascript, the seperation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a seperate `setWidth` method: 
+LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming in Javascript, the separation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a seperate `setWidth` method: 
 
 ```javascript
 // To get the width
@@ -483,7 +483,7 @@ square.setWidth(width + 2);
 ```
 
 
-This has a few problems, the first being that `width` and `setWidth()` are two seperate things, so if you wanted to add another property, `height` for example, you would make a `height` property AND a `setHeight()` method. Sometimes this is OK, but for simple straigtforward properties it can get annoying. And if other things are manipulating them then things can get really hectic.
+This has a few problems, the first being that `width` and `setWidth()` are two seperate things, so if you wanted to add another property, `height` for example, you would make a `height` property AND a `setHeight()` method. Sometimes this is OK, but for simple straightforward properties it can get annoying. And if other things are manipulating them then things can get really hectic.
 
 LCES solves this problem by introducing this construct called **states**, similar to normal properties:
 
@@ -502,7 +502,7 @@ So in essence, LCES is a sophisticated getter/setter system.
 
 ## Getting Started with LCES Core
 
-LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with **listeners** that are invoked on every little change. Let's make with a cat component, then add a hungry state:
+LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with **listeners** that are invoked on every little change. Let's make a cat component, then add a hungry state:
 
 ```javascript
 var cat = new lcComponent();
@@ -512,7 +512,7 @@ cat.addStateListener("hungry", function(value) {
   console.log("The cat is" + (value ? " " : "n't ") + "hungry :O");
 });
 
-// Whenever you need change the cat's hunger
+// Whenever you need to change the cat's hunger
 cat.hungry = true;  // > The cat is hungry :O
 cat.hungry = false; // > The cat isn't hungry :O
 
@@ -571,9 +571,52 @@ More documation here soon
 
 jSh (jShorts2) is a library created to shorten normal coding procedures, like selecting and creating elements, extending objects, checking real object types, and so on.
 
-### jSh(selector);
+### jSh(selector || element);
 
-**Selector** - String. Returns elements located with `selector`.
+ * **selector** - String. Returns elements located with `selector`.
+ 
+ * **element** - Element node
+
+*Example:*
+```HTML
+<div id="pet-store">
+  <div class="pets" id="cats">
+    Kitties
+    <div class="details">
+      3 Available
+    </div>
+  </div>
+  <div class="pets" id="dogs">
+    Puppies
+    <div class="details">
+      5 Available
+    </div>
+  </div>
+  <div class="pets" id="fish">
+    Fishies
+    <div class="details">
+      1 Available
+    </div>
+  </div>
+</div>
+```
+jSh() is chainable, as it adds a .jSh method to it's returned elements:
+```javascript
+jSh("#pet-store")        // <div id="pet-store" ...
+jSh(".pets")             // [<div class="pets"...,  <div class="pets"..., ...]
+jSh("div")               // [<div ...,  <div ..., <div ..., ...]
+jSh("#cats").textContent // "Kitties 3 Available"
+
+// Chaining jSh()
+jSh("#pet-store").jSh(".details")              // [<div class="details"...,  <div class="details"..., ...]
+jSh("#fish").jSh(".details")[0].textContent    // "1 Available"
+jSh(".pets")[1].jSh(".details")[0].textContent // "5 Available"
+```
+Calling jSh with an element as an argument simply add a .jSh method and returns the element:
+```javascript
+
+```
+
 
 ### 1 - jSh.d(idAndClass, content, child, attributes, properties, events);
 
