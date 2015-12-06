@@ -607,13 +607,14 @@ jSh (jShorts2) is a library created to shorten normal coding procedures, like se
 jSh("#pet-store")        // <div id="pet-store" ...
 jSh(".pets")             // [<div class="pets"...,  <div class="pets"..., ...]
 jSh("div")               // [<div ...,  <div ..., <div ..., ...]
-jSh("#cats").textContent // "Kitties 3 Available"
+jSh("#cats").textContent // "Kitties 3 Available" *
 
 // Chaining jSh()
 jSh("#pet-store").jSh(".details")              // [<div class="details"...,  <div class="details"..., ...]
-jSh("#fish").jSh(".details")[0].textContent    // "1 Available"
-jSh(".pets")[1].jSh(".details")[0].textContent // "5 Available"
+jSh("#fish").jSh(".details")[0].textContent    // "1 Available" *
+jSh(".pets")[1].jSh(".details")[0].textContent // "5 Available" *
 ```
+\* textContent will most likely contain redundant whitespace which I didn't show for simplified illustrative purposes. A nice way to clean it up could be: `jSh(".details")[0].textContent.trim().replace(/\s+/g, " ");`
 
 Calling `jSh()` with an element as an argument simply adds a `.jSh()` method and returns the element:
 
