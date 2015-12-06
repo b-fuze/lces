@@ -1,39 +1,36 @@
 # LCES
-LCES, the Linked Component Event System, is a Javascript library that features custom styled elements with a sophisticated state system, a templating system, dynamicText for dynamicly updating content what/wherever it may be, and more.
+LCES, the Linked Component Event System, is a Javascript library that features custom styled elements with a sophisticated state system, a templating system, dynamicText for dynamically updating content no matter what/where it may be, and more.
 
-## Including LCES
+## Including LCES in your project
 
 Add the following code to your page:
 
 ```javascript
 // A quick little utility for loading a bunch of js/css files at once
-function loadAll(k){function l(b){var a=document.createElement("script");a.type="text/javascript";a.onload=function(){d.push(b);g()};e.appendChild(a);a.src=b;return a}function m(b){var a=document.createElement("link");a.rel="stylesheet";a.type="text/css";a.onload=function(){d.push(b);g()};e.appendChild(a);a.href=b;return a}function g(){d.length===c.length&&f&&f()}var e=document.getElementsByTagName("head")[0];var d=[],h=[],c=Array.prototype.slice.call(arguments).slice(1),f;"function"===typeof c[c.length-1]&&(f=c.pop());switch(k){case "js":c.forEach(function(b){h.push(l(b))});break;case "css":c.forEach(function(b){h.push(m(b))})}};
+function loadAll(k){function l(b){var a=document.createElement("script");a.async=true;a.type="text/javascript";a.onload=function(){d.push(b);g()};e.appendChild(a);a.src=b;return a}function m(b){var a=document.createElement("link");a.rel="stylesheet";a.type="text/css";a.onload=function(){d.push(b);g()};e.appendChild(a);a.href=b;return a}function g(){d.length===c.length&&f&&f()}var e=document.getElementsByTagName("head")[0];var d=[],h=[],c=Array.prototype.slice.call(arguments).slice(1),f;"function"===typeof c[c.length-1]&&(f=c.pop());switch(k){case "js":c.forEach(function(b){h.push(l(b))});break;case "css":c.forEach(function(b){h.push(m(b))})}};
 
-// LCES main function that holds everything
+// LCES main function that holds everything & LCES rc for the init sequence
 function lces(lcesname) {
   return LCES.components[lcesname];
 }
 
-// LCES rc for the init sequence
-lces.rc = new Array(13);
+lces.rc = [];
 lces.loadedDeps = false;
 
-// Load LCES and any other JS deps you want
 loadAll("js",
   "http://b-fuze.github.io/lces/main-js/lces-min/lces.min.current.js",
   // Can add more JS files to load here
   function() {
-    // This callback is called when all the previously listed js are loaded
+    // This callback is called when all the previously listed js files are loaded
     // lces.rc will hold each LCES component in their correct init order
     lces.rc.forEach(function(i) {i();});
     lces.loadedDeps = true;
     
     // If your code runs after the page is loaded, you won't need this event listener
     window.addEventListener("load", function() {
-      // Start LCES
-      lces.init();
+      lces.init(); // Start LCES
       
-      // LCES is now loaded, now do magic :D
+      // LCES is loaded, now do magic :D
     });
   }
 );
@@ -76,8 +73,8 @@ widget.children; // Array of childNodes
 
 // Setting CSS styles, does not change any other properties
 widget.style = {
-  margin: 4,
-  color: "red",
+  margin:  4,
+  color:   "red",
   opacity: 0.5
 }
 
@@ -91,11 +88,11 @@ widget.setAttr("attribute", "value");
 widget.removeAttr("attribute1", "attribute2", "attribute3");
 ```
 
-Is the basic functionality of **lcWidget**, and from it is derived many other components.
+...is the basic functionality of **lcWidget**, and from it is derived many other components.
 
 ## LCES Widget in HTML Markup
 
-You can set elements in your HTML markup to be widgets of a specific type via the `lces-widget` or `type` attribute when the page loads, if you leave it empty LCES will determine the type by itself.
+You can set elements in your HTML markup to be widgets of a specific type via the `lces-widget` or `type` attribute for `<lces-widget>` tags when the page loads, if you leave it empty LCES will determine the type by itself.
 
 ```HTML
 <div lces-widget="widget" lces-name="litter-box">Dirty stuff to change here</div>
@@ -144,15 +141,15 @@ var input = new lcTextField();
 
 ### lcTextField Properties
 
-#### input.value
-
-An LCES state. Returns the input value, and assigning will change it. 
+ * #### input.value
+   
+   An LCES state. Returns the input value, and assigning will change it. 
 
 ### lcTextField Methods
 
-#### input.focus();
-
-#### input.blur();
+ * #### input.focus();
+   
+ * #### input.blur();
 
 `new lcTextArea([Textarea Element])` functions the same way
 
@@ -170,29 +167,29 @@ var numField = new lcNumberField();
 
 ### lcNumberField Properties
 
-#### numField.value
+ * #### numField.value
+  
+  LCES state. Number.
 
-LCES state. Number.
+ * #### numField.min
+   
+   LCES state. Number.
 
-#### numField.min
+ * #### numField.max
+   
+   LCES state. Number.
 
-LCES state. Number.
+ * #### numField.digits
+   
+   LCES state. Number.
 
-#### numField.max
+ * #### numField.integer
+   
+   LCES state. Boolean. If false, won't accept any decimal values.
 
-LCES state. Number.
-
-#### numField.digits
-
-LCES state. Number.
-
-#### numField.integer
-
-LCES state. Boolean. If false, won't accept any decimal values.
-
-#### numField.decimalPoints
-
-LCES state. Number.
+ * #### numField.decimalPoints
+   
+   LCES state. Number.
 
 ### new lcFileInput([Input Element]);
 
@@ -206,14 +203,14 @@ LCES state. Number.
 var file = new lcFileInput();
 ```
 
-#### file.upload(url, keys, progress, readystatechange);
-**url** - String. Upload url
-
-**keys** - Optional. Either array of input elements (lcWidget wrappers allowed), or normal key-value object to be included in the request. If omitted, substitute with any falsy value to use the following arguments.
-
-**progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent). If omitted, substitute with any falsy value.
-
-**readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
+ * #### file.upload(url, keys, progress, readystatechange);
+   **url** - String. Upload url
+   
+   **keys** - Optional. Either array of input elements (lcWidget wrappers allowed), or normal key-value object to be included in the request. If omitted, substitute with any falsy value to use the following arguments.
+   
+   **progress** - Optional. Callback for [`progress events`](https://developer.mozilla.org/en/docs/Web/API/ProgressEvent). If omitted, substitute with any falsy value.
+   
+   **readystatechange** - Optional. Callback for [`readystatechange events`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/onreadystatechange).
 
 ### new lcCheckBox([Input Element]);
 
@@ -228,9 +225,9 @@ var chkBox = new lcCheckBox();
 ```
 ### lcCheckBox Properties
 
-#### chkBox.checked
-
-LCES State. Boolean.
+ * #### chkBox.checked
+   
+   LCES State. Boolean.
 
 
 ### new lcDropDown([Select Element]);
@@ -248,15 +245,15 @@ LCES State. Boolean.
 var dropDown = new lcDropDown();
 ```
 
-#### dropDown.addOption(value, content);
+ * #### dropDown.addOption(value, content);
 
-**value** - Either a `number` or `string`.
+   **value** - Either a `number` or `string`.
+   
+   **content** - Either a `string`, `DOMNode`, or `lcWidget`.
 
-**content** - Either a `string`, `DOMNode`, or `lcWidget`.
-
-#### dropDown.removeOption(option);
-
-**option** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### dropDown.removeOption(option);
+   
+   **option** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 ### new lcTable([Table Element]);
 
@@ -288,25 +285,25 @@ var dropDown = new lcDropDown();
 var table = new lcTable();
 ```
 
-#### table.setHeadings(headings);
-**headings** - Array of headings, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+ * #### table.setHeadings(headings);
+  **headings** - Array of headings, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
 
-#### table.addHeading(heading);
-**heading** - Either a `string`, `DOMNode`, or `lcWidget`.
+ * #### table.addHeading(heading);
+   **heading** - Either a `string`, `DOMNode`, or `lcWidget`.
 
-#### table.removeHeading(heading);
-**heading** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### table.removeHeading(heading);
+   **heading** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-#### table.addRow(content);
-**content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+ * #### table.addRow(content);
+   **content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
 
-#### table.removeRow(row);
-**row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### table.removeRow(row);
+   **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
-#### table.insertBeforeRow(content, row);
-**content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
-
-**row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
+ * #### table.insertBeforeRow(content, row);
+   **content** - Array of row columns, each indice will take one column, and can either be a `string`, `DOMNode`, or `lcWidget`.
+   
+   **row** - Either an index (zero indexed), `DOMNode`, or `lcWidget`.
 
 ### new lcAccordion([Reference Element]);
 
@@ -329,25 +326,25 @@ var accordion = new lcAccordion();
 
 ### lcAccordion Properties
 
-#### accordion.sectionHeight
+ * #### accordion.sectionHeight
+   
+   Number. Section open height in pixels
 
-Number. Section open height in pixels
+ * #### accordion.sectionsCloseable
+   
+   Boolean. If true, clicking section titles will toggle them opening or closing
 
-#### accordion.sectionsCloseable
-
-Boolean. If true, clicking section titles will toggle them opening or closing
-
-#### accordion.maxOpen
-
-LCES state. Number. Maximum sections tht can be opened at a time.
+ * #### accordion.maxOpen
+   
+   LCES state. Number. Maximum sections tht can be opened at a time.
 
 ### lcAccordion Methods
 
-#### accordion.addSection(title, content);
-
-**title** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
-
-**content** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
+ * #### accordion.addSection(title, content);
+   
+   **title** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
+   
+   **content** - Either a `string`, `DOMNode`, `lcWidget`, or array of the latter two.
 
 ### new lcColorChooser([Reference Element]);
 
@@ -363,9 +360,9 @@ The attribute `color` is optional.
 var color = new lcColorChooser();
 ```
 
-#### color.value
-
-LCES state. Array of three numerical 0-255 values representing RGB in that order respectively.
+ * #### color.value
+   
+   LCES state. Array of three numerical 0-255 values representing RGB in that order respectively.
 
 ### new lcSlider([Reference Element]);
 
@@ -383,33 +380,110 @@ var slider = new lcSlider();
 
 ### Slider Properties
 
-#### slider.min
+ * #### slider.min
+   
+   LCES state. Number. Minimum value for the slider
 
-LCES state. Number. Minimum value for the slider
+ * #### slider.max
+   
+   LCES state. Number. Maximum value for the slider
 
-#### slider.max
+ * #### slider.hideValue
+   
+   LCES state. Boolean. If true, will hide the value on the slider
 
-LCES state. Number. Maximum value for the slider
+### new lcWindow([Reference Element]);
 
-#### slider.hideValue
+*HTML:*
+```HTML
+<lces-widget type="window" name="aucp-animeupdates" lces-visible="false" width="500" height="300" centered title-visible="false" buttonpanel-visible="true">
+  <lces-title>Window Title</lces-title>
+  
+  <lces-contents>
+    <!-- The contents of the window -->
+  </lces-contents>
+  
+  <lces-buttons>
+          <button onclick="lces('').visible">Close</button>
+  </lces-buttons>
+</lces-widget>
+```
 
-LCES state. Boolean. If true, will hide the value on the slider
+All the attributes are optional except for `type="window"`, the title and buttonpanel are visible by default, even if empty.
+`<lces-contents>` is the only required tag in the window widget.
+
+```javascript
+var win = new lcWindow();
+```
+
+### Window properties
+
+ * #### win.title
+    
+   String. The windows title's InnerHTML.
+
+ * #### win.visible
+    
+   Boolean. The window's visibility.
+
+ * #### win.titleVisible
+    
+   Boolean. The title's visibility.
+
+ * #### win.buttonPanelVisible
+    
+   Boolean. The button panel's visibility.
+
+ * #### win.centered
+    
+   Boolean. If true the window will always be centered in the viewport.
+
+ * #### win.draggable
+    
+   Boolean. If true the window will be draggable from it's title. Only works when win.centered is false.
+
+ * #### win.width
+    
+   Number. The windows innercontent (NOT the window itself) container's overall width.
+
+ * #### win.height
+    
+   Number. The windows innercontent (NOT the window itself) container's overall height.
+
+All the listed properties are LCES states.
+
+
+### Window methods
+
+* #### win.addButton(text, click);
+    
+   **text** String. The button's text.
+   
+   **click** Function. Function invoked on click.
+   
+   *Returns* lcWidget wrapped button element.
+
+* #### win.removeButton(button);
+    
+   **button** lcWidget wrapper for the button.
+   
+   *Returns* Nothing.
 
 
 ## Why I made LCES
 
-LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming in Javascript, the seperation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a seperate `setWidth` method: 
+LCES (pronounced "Elsis") was originally created to solve a problem that I had with OOP programming in Javascript, the separation of simple properties and their mutation methods. For example, if you have a square object with a `width` property, but that `width` property cannot be changed without invoking a separate `setWidth` method: 
 
 ```javascript
 // To get the width
 var width = square.width; // or square.getWidth() if you will
 
-// Use a seperate method to change it
+// Use a separate method to change it
 square.setWidth(width + 2);
 ```
 
 
-This has a few problems, the first being that `width` and `setWidth()` are two seperate things, so if you wanted to add another property, `height` for example, you would make a `height` property AND a `setHeight()` method. Sometimes this is OK, but for simple straigtforward properties it can get annoying. And if other things are manipulating them then things can get really hectic.
+This has a few problems, the first being that `width` and `setWidth()` are two separate things, so if you wanted to add another property, `height` for example, you would make a `height` property AND a `setHeight()` method. Sometimes this is OK, but for simple straightforward properties it can get annoying. And if other things are manipulating them then things can get really hectic.
 
 LCES solves this problem by introducing this construct called **states**, similar to normal properties:
 
@@ -423,12 +497,12 @@ square.addStateListener("width", function(newValue) {
 });
 ```
 
-So in essence, LCES is a getter/setter system with extra features.
+So in essence, LCES is a sophisticated getter/setter system.
 
 
 ## Getting Started with LCES Core
 
-LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with **listeners** that are invoked on every little change. Let's make with a cat component, then add a hungry state:
+LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with **listeners** that are invoked on every little change. Let's make a cat component, then add a hungry state:
 
 ```javascript
 var cat = new lcComponent();
@@ -438,7 +512,7 @@ cat.addStateListener("hungry", function(value) {
   console.log("The cat is" + (value ? " " : "n't ") + "hungry :O");
 });
 
-// Whenever you need change the cat's hunger
+// Whenever you need to change the cat's hunger
 cat.hungry = true;  // > The cat is hungry :O
 cat.hungry = false; // > The cat isn't hungry :O
 
@@ -461,7 +535,7 @@ function Cat(name) {
   });
 }
 
-// jSh (jShorts) is a seperate library that LCES depends on
+// jSh (jShorts) is a separate library that LCES depends on
 jSh.inherit(Cat, lcComponent); // To inherit prototype chain
 
 var kitty = new Cat("Socks");
@@ -497,9 +571,57 @@ More documation here soon
 
 jSh (jShorts2) is a library created to shorten normal coding procedures, like selecting and creating elements, extending objects, checking real object types, and so on.
 
-### jSh(selector);
+### jSh(selector | element);
 
-**Selector** - String. Returns elements located with `selector`.
+ * **selector** - String. Returns elements located with `selector`.
+ 
+ * **element** - Element node
+
+*Example:*
+```HTML
+<div id="pet-store">
+  <div class="pets" id="cats">
+    Kitties
+    <div class="details">
+      3 Available
+    </div>
+  </div>
+  <div class="pets" id="dogs">
+    Puppies
+    <div class="details">
+      5 Available
+    </div>
+  </div>
+  <div class="pets" id="fish">
+    Fishies
+    <div class="details">
+      1 Available
+    </div>
+  </div>
+</div>
+```
+
+`jSh()` is chainable, as it adds a `.jSh()` method to it's returned elements:
+
+```javascript
+jSh("#pet-store")        // <div id="pet-store" ...
+jSh(".pets")             // [<div class="pets"...,  <div class="pets"..., ...]
+jSh("div")               // [<div ...,  <div ..., <div ..., ...]
+jSh("#cats").textContent // "Kitties 3 Available" *
+
+// Chaining jSh()
+jSh("#pet-store").jSh(".details")              // [<div class="details"...,  <div class="details"..., ...]
+jSh("#fish").jSh(".details")[0].textContent    // "1 Available" *
+jSh(".pets")[1].jSh(".details")[0].textContent // "5 Available" *
+```
+\* textContent will most likely contain redundant whitespace which I didn't show for simplified illustrative purposes. A nice way to clean it up could be: `jSh(".details")[0].textContent.trim().replace(/\s+/g, " ");`
+
+Calling `jSh()` with an element as an argument simply adds a `.jSh()` method and returns the element:
+
+```javascript
+jSh(document.body).jSh(".pets")[0] // <div class="pets" id="cats"...
+```
+
 
 ### 1 - jSh.d(idAndClass, content, child, attributes, properties, events);
 
@@ -507,28 +629,28 @@ Returns a `DOMNode` <div> element created with the arguments provided. Aims to b
 
 *All of the arguments may be omitted by substituting undf (undefined) in their place*
 
-**idAndClass** - A string that contains the id and classname.
+ * **idAndClass** - A string that contains the id and classname.
 
-Valid formats are:
- * `"#id.class"`
- * `"#id.class.class.class"` - No limit on class count
- * `"#id"`
- * `".class.class"`
+   Valid formats are:
+    * `"#id.class"`
+    * `"#id.class.class.class"` - No limit on class count
+    * `"#id"`
+    * `".class.class"`
 
-**content** - The textContent of the element. To make it innerHTML instead use the `ih()` function:
-```javascript```
+ * **content** - The textContent of the element. To make it innerHTML instead use the `ih()` function:
+```javascript
 jSh.d(..., ih("<img src=\"url.com\"/>"), ...);
 ```
 
-**child** - Either a `DOMNode` or array of `DOMNodes`
+ * **child** - Either a `DOMNode` or array of `DOMNodes`
 
-**attributes** - Object with properties and their values for the element's attributes.
+ * **attributes** - Object with properties and their values for the element's attributes.
 
-**properties** - Object with properties to be mapped the to the element created.
+ * **properties** - Object with properties to be mapped the to the element created.
 
 ### 2 - jSh.d(options);
 
-**Options** - Optional. Object containing alternative properties for all the arguments above.
+ * **Options** - Optional. Object containing alternative properties for all the arguments above.
 
 Format:
 ```javascript
@@ -547,7 +669,7 @@ var options = {
 // Method 1 - Ordered arguments
 var div = jSh.d("#id.class1.class2", ih("<br/> Some innerHTML..."), [
   jSh.d(undf, "And TextContent here..."),
-  jSh.d(".avatar", undf, jSh.c("img", {prop: {src: "http://somesite.com/image.png"}})),
+  jSh.d(".avatar", undf, jSh.c("img", undf, undf, undf, undf, {src: "http://somesite.com/image.png"})),
   jSh.d(),
   jSh.c("br"),
   jSh.d(undf, ih("<b>It all works.</b>"))
@@ -569,29 +691,29 @@ var div = jSh.d({
 
 ### jSh.c(tagName, args...);
 
-**tagName** - String. Name of the element's tag name, like `img`, `div`, `button`, and so forth.
+ * **tagName** - String. Name of the element's tag name, like `img`, `div`, `button`, and so forth.
 
-**args** - Optional. The same arguments as `jSh.d()`.
+ * **args** - Optional. The same arguments as `jSh.d()`.
 
 ### jSh.svg(idAndClass, width, height, path);
 
 Creates an SVG element with it's paths that is normally a pain to achieve.
 
-**idAndClass** - Id or class with the same format as `jSh.d();`
+ * **idAndClass** - Id or class with the same format as `jSh.d();`
 
-**width** - Width of SVG in pixels
+ * **width** - Width of SVG in pixels
 
-**height** - Height of SVG in pixels
+ * **height** - Height of SVG in pixels
 
-**path** - Either one path or array of paths created with `jSh.path();`
+ * **path** - Either one path or array of paths created with `jSh.path();`
 
 ### jSh.path(idAndClass, points, style);
 
-**idAndClass** - Id or class with the same format as `jSh.d();`
+ * **idAndClass** - Id or class with the same format as `jSh.d();`
 
-**points** - SVG points, see example.
+ * **points** - SVG points, see example.
 
-**style** - Style attribute. See example.
+ * **style** - Style attribute. See example.
 
 #### Example
 ```javascript
@@ -605,9 +727,9 @@ jSh.svg(".svg-triangle", 15, 15, [
 
 Copies the own properties from `extension` to `extended`.
 
-**extended** - Object to be extended.
+ * **extended** - Object to be extended.
 
-**extension** - Object with own properties to be copied to the extended.
+ * **extension** - Object with own properties to be copied to the extended.
 
 #### Example
 ```javascript
@@ -628,7 +750,7 @@ lces.types["textfield"] = lcTextField;
 
 Converts any array-like object into an array. e.g. `Element.childNodes`, the function scope `arguments` object, `strings`, and more.
 
-**arraylikeobject** - Any array-like data.
+ * **arraylikeobject** - Any array-like data.
 
 #### Example
 ```javascript
@@ -641,11 +763,12 @@ jSh.toArr(arguments).forEach(function(argument) {
 
 Returns the correct type of `data`, e.g. `"null"` for `null` instead of `"object"` etc. 
 
-**data** - Anything.
+ * **data** - Anything.
 
 ### jSh.nChars(string, n);
 
 Returns `string` multiplied `n` times.
 
-**string** - String. String to be multiplied.
-**n** - Number. Number of times to multiply string.
+ * **string** - String. String to be multiplied.
+
+ * **n** - Number. Number of times to multiply string.
