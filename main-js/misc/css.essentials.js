@@ -1,4 +1,4 @@
-lces.rc[10] = function() {
+lces.rc[9] = function() {
   // lces colorize global variable
   lces.css = {};
 

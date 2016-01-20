@@ -1,5 +1,4 @@
-lces.rc[7] = function() {
-
+lces.rc[6] = function() {
   // Conversion functions
   
   // RGB Range: 0 - 1
@@ -124,7 +123,7 @@ lces.rc[7] = function() {
     modal.style.display = "block";
     
     // Set the wheel bg
-    wheel.style.backgroundImage = "url(http://b-fuze.github.io/lces/main-img/colorchooser.png)";
+    wheel.style.backgroundImage = "url(https://b-fuze.github.io/lces/main-img/colorchooser.png)";
     
     // Prep sliders
     satSlide.oldComponent = satSlide.component;

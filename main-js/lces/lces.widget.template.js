@@ -1,10 +1,5 @@
 // LCES Templating System
-
-
-
-
-// NEW CODE
-lces.rc[5] = function() {
+lces.rc[4] = function() {
   lces.template = function template(options) {
     if (!options)
       throw Error("lces.template() requires one options object as the first argument");
@@ -184,6 +179,8 @@ lces.rc[5] = function() {
   jSh.MockupElementMethods = {
     // Conversion/Copying functions
     construct: function(deep, clone, dynContext) {
+      var jSh = window.jSh;
+      
       var that   = this;
       var newElm = clone ? jSh.MockupElement(this.tagName) : jSh.e(this.tagName.toLowerCase());
       var nsElm  = newElm.nsElm;
@@ -277,17 +274,21 @@ lces.rc[5] = function() {
       
       // Add own properties from initial MockupElement
       // TODO: Optimize this!!!!
-      Object.getOwnPropertyNames(this).filter(function(i) {return jSh.MockupElementOnlyProps.indexOf(i) === -1;}).forEach(function(i) {
-        if (dynContext && jSh.type(that[i]) === "string") {
-          var dyn = dynContext.dynText.compile(that[i] + "", function(s) {
-            newElm[i] = s;
+      var newProps = Object.getOwnPropertyNames(this).filter(function(i) {return jSh.MockupElementOnlyProps.indexOf(i) === -1;});
+      
+      for (var i=0,l=newProps.length; i<l; i++) {
+        var prop = newProps[i];
+        
+        if (dynContext && jSh.type(that[prop]) === "string") {
+          var dyn = dynContext.dynText.compile(that[prop] + "", function(s) {
+            newElm[prop] = s;
           });
           
           if (!dyn)
-            newElm[i] = that[i];
-        } else if (that[i])
-          newElm[i] = that[i];
-      });
+            newElm[prop] = that[prop];
+        } else if (that[prop])
+          newElm[prop] = that[prop];
+      }
       
       // Finally add the classNames if any
       if (this.className) {
@@ -304,6 +305,13 @@ lces.rc[5] = function() {
         this.childNodes.forEach(function(i) {
           newElm.appendChild(i[method](true, dynContext));
         });
+      }
+      
+      if (!clone && this.tagName.toLowerCase() === "lces-placeholder") {
+        var phName = this.phName;
+        
+        var ph = new lcPlaceholder(newElm);
+        ph.phName = phName;
       }
       
       // End
@@ -654,7 +662,7 @@ lces.rc[5] = function() {
       configurable: false,
       get: function() {
         return that.childNodes.map(function(i) {
-          if (i.tagName.toLowerCase() === "lces-template-constructor")
+          if (i.tagName && i.tagName.toLowerCase() === "lces-template-constructor")
             return i.__lcesTemplateConstructor;
           
           return i;
@@ -723,7 +731,7 @@ lces.rc[5] = function() {
       dynContext.dynText.allowTags = true;
       dynContext.dynText.element   = document.createDocumentFragment();
       
-      var compiled = dynContext.dynText.compile(d);
+      var compiled = dynContext.dynText.compile(this.nodeValue);
       
       if (compiled)
         return dynContext.dynText.element;
@@ -859,6 +867,7 @@ lces.rc[5] = function() {
     var widget = new lcPlaceholder(jSh.cm("lces-placeholder"));
     
     widget.phName = phName;
+    widget.element.phName = phName;
     
     return widget.element;
   };
@@ -870,11 +879,17 @@ lces.rc[5] = function() {
     // Setup placeholders
     placeholders.forEach(function(i) {
       var attrVal = i.getAttribute("ph-name");
+      var attrVis = i.getAttribute("ph-visible");
+      
       var widget  = new lcPlaceholder(i);
       
       if (attrVal) {
         i.phName = attrVal;
         widget.phName = attrVal;
+      }
+      
+      if (attrVis !== null) {
+        i.style.display = "block";
       }
     });
   }

@@ -1,4 +1,4 @@
-lces.rc[8] = function() {
+lces.rc[7] = function() {
   // LCES Windows
 
   lces.ui.Windows = [];
@@ -139,19 +139,34 @@ lces.rc[8] = function() {
     
     
     // Window fade in effect
-    onTransitionEnd(this.container, function(e) {
-      if (e.propertyName == "opacity" && getComputedStyle(this)["opacity"] == 0)
-        that.container.setAttribute("window-invisible", "");
-    });
+    // onTransitionEnd(this.container, function(e) {
+    //   if (e.propertyName == "opacity" && getComputedStyle(this)["opacity"] == 0)
+    //     that.container.setAttribute("window-invisible", "");
+    // });
+    
+    this._closingTimeout = null;
+    var container = this.container;
     
     this.setState("visible", false);
     this.addStateListener("visible", function(visible) {
+      var container = that.container;
+      
       if (visible) {
-        that.container.removeAttribute("window-invisible");
+        if (that._closingTimeout !== undf)
+          clearTimeout(that._closingTimeout);
         
-        that.container.setAttribute("visible", "");
-      } else
-        that.container.removeAttribute("visible");
+        container.removeAttribute("window-invisible");
+        
+        container.setAttribute("visible", "");
+      } else {
+        container.removeAttribute("visible");
+        
+        if (that._closingTimeout !== undf) {
+          that._closingTimeout = setTimeout(function() {
+            container.setAttribute("window-invisible", "");
+          }, 420);
+        }
+      }
     });
     
     this.container.component = this;
@@ -414,20 +429,32 @@ lces.rc[8] = function() {
     })
     
     // Remove window visible state
+    clearTimeout(this._closingTimeout);
+    this._closingTimeout = undf;
+    
     this.removeState("visible");
     this.setState("visible");
     
+    var container = this.container;
+    var lces = window.lces;
+    
     this._visibleTimeout = null;
     this._visibleAnim    = null;
+    
     this.addStateListener("visible", function(visible) {
+      clearTimeout(that._closingTimeout);
+      
+      var container = that.container;
+      var lcesUI = lces.ui;
+      
       if (visible) {
-        that.container.removeAttribute("window-invisible");
+        container.removeAttribute("window-invisible");
         
         // that.container.style.height = "auto";
         clearTimeout(that._visibleTimeout);
         
         // Add to notifi position container
-        lces.ui.notifications.alignments[that.ypos][that.xpos].add(that);
+        lcesUI.notifications.alignments[that.ypos][that.xpos].add(that);
         
         if (that.relativeAlignment) {
           // Set the relative offset
@@ -436,8 +463,8 @@ lces.rc[8] = function() {
         
         // Notifi fade in animation
         that._visibleAnim = setTimeout(function() {
-          that.container.setAttribute("visible", "");
-          that.container.getChild(0).style.height = that.renderedHeight;
+          container.setAttribute("visible", "");
+          container.getChild(0).style.height = that.renderedHeight;
         }, 0);
         
         // Closing countdown
@@ -449,17 +476,19 @@ lces.rc[8] = function() {
         
       } else {
         // Fade out animation
-        that.container.removeAttribute("visible");
+        container.removeAttribute("visible");
         
         // Clear closing and anime countdown
         clearTimeout(that._visibleTimeout);
         clearTimeout(that._visibleAnim);
         
-        if (getComputedStyle(that.container)["opacity"] == 0 && that.container.parentNode)
-          that.container.parentNode.removeChild(that.container);
+        if (getComputedStyle(that.container)["opacity"] == 0 && container.parentNode)
+          container.parentNode.removeChild(container);
         
-        that.container.getChild(0).style.height = that.renderedHeight;
-        that.container.getChild(0).style.height = "1px";
+        var firstChild = container.getChild(0);
+        
+        firstChild.style.height = that.renderedHeight;
+        firstChild.style.height = "1px";
       }
     });
     
@@ -573,8 +602,10 @@ lces.rc[8] = function() {
     }
     
     var addPrepend = function(notifi) {
-      if (this.getChild(0) && this.getChild(0) !== notifi.container)
-        this.insertBefore(notifi.container, this.getChild(0));
+      var firstChild = this.getChild(0);
+      
+      if (firstChild && firstChild !== notifi.container)
+        this.insertBefore(notifi.container, firstChild);
       else
         this.appendChild(notifi.container);
     }

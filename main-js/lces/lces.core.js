@@ -33,7 +33,10 @@ lces.rc[2] = function() {
   }
 
   // ESSENTIAL COMPONENT METHODS
-
+  
+  // For faster reference
+  var Object = window.Object;
+  
   window.lcComponentMethods = {
     setState: function(state, stateStatus, recurring, recurred) {
       if (!this.states[state]) {
@@ -43,61 +46,60 @@ lces.rc[2] = function() {
           component: this,
           name: state,
           set: function(stateStatus) {this.component.setState(state, stateStatus);},
+          get: function() {return this.stateStatus;},
           stateStatus: stateStatus,
           oldStateStatus: {nullStuff: null}, // Just to ensure that it doesn't match.
-          get: function() {return this.stateStatus;},
           functions: [],
           conditions: [],
           getter: null,
           data: {},
-          private: false, // If true then data links can't change it.
+          private: false, // If true then data links (lcGroup) can't change it.
           flippedStateCall: false,
           linkedStates: {} // {state: "state", func: func}
         }
 
         var that = this;
-        Object.defineProperty(this, state, {configurable: true, set: function(stateStatus) { that.setState(state, stateStatus); }, get: function() { return that.getState(state); } });
+        Object.defineProperty(this, state, {configurable: true, set: function(stateStatus) { that.setState(state, stateStatus); }, get: function() { return that.getState(state); }});
       }
 
-
       var stateObject = this.states[state];
+      var stateCond   = stateObject.conditions;
       var canContinue = true;
       
-      
-      for (var i=0,l=stateObject.conditions.length; i<l; i++) {
-        canContinue = stateObject.conditions[i].call(stateObject, stateStatus, recurred);
+      for (var i=0,l=stateCond.length; i<l; i++) {
+        var condFunc = stateCond[i];
+        
+        if (condFunc)
+          canContinue = condFunc.call(stateObject, stateStatus, recurred);
         
         if (!canContinue)
           return false;
       }
       
-      
       if (stateObject.stateStatus === stateStatus && !recurring)
         return false;
 
-
       // If we're here then everything seems to be okay and we can move on.
-      //
-      // Firstly set the state.
-      
+      // Set the state.
       stateObject.oldStateStatus = stateObject.stateStatus;
       stateObject.stateStatus = stateStatus;
-
+      
+      var stateObjectFuncs = stateObject.functions;
+      
       // Now call listeners...
-
-
-      for (var j=0,l2=stateObject.functions.length; j<l2; j++) {
-        stateObject.functions[j].call(stateObject, stateStatus, recurring);
+      for (var j=0,l2=stateObjectFuncs.length; j<l2; j++) {
+        var func = stateObjectFuncs[j];
+        
+        if (func)
+          func.call(stateObject, stateStatus, recurring);
       }
 
       return true;
     },
 
     getState: function(state) {
-
       if (!this.states[state])
         return false;
-
 
       return typeof this.states[state].get === "function" ? this.states[state].get.call(this.states[state]) : this.states[state].stateStatus;
     },
@@ -112,8 +114,9 @@ lces.rc[2] = function() {
     addStateListener: function(state, stateFunc) {
       if (!this.states[state]) {
         this.setState(state, undf);
-        console.warn(state + " doesn't exist");
+        // console.warn(state + " doesn't exist"); // NOTICE: Removed for redundancy
       }
+      
       this.states[state].functions.push(stateFunc);
     },
 
@@ -129,7 +132,19 @@ lces.rc[2] = function() {
     },
 
     removeGroupLink: function(group) {
-      group.removeMember(this);
+      if (group)
+        group.removeMember(this);
+    },
+    
+    removeAllGroupLinks: function() {
+      var groups = this.groups;
+      
+      for (var i=0,l=groups.length; i<l; i++) {
+        var group = groups[i];
+        
+        if (group)
+          group.removeMember(this);
+      }
     },
 
     removeStateListener: function(state, listener) {
@@ -137,11 +152,12 @@ lces.rc[2] = function() {
         throw ReferenceError("No such state");
 
       var stateObject = this.states[state];
-      for (var i=0,l=stateObject.functions.length; i<l; i++) {
-        if (stateObject.functions[i] === listener) {
-          stateObject.functions.splice(i, 1);
-          return true;
-        }
+      var index = stateObject.functions.indexOf(listener);
+      
+      if (index !== -1) {
+        stateObject.functions.splice(index, 1);
+        
+        return true;
       }
 
       return false; // We failed it seems :/
@@ -150,8 +166,14 @@ lces.rc[2] = function() {
     removeAllStateListeners: function(state) {
       if (!this.states[state])
         throw ReferenceError("No such state");
-
-      this.states[state].functions = [];
+      
+      var functions = this.states[state].functions;
+      var listenersLength = functions.length;
+      
+      for (var i=0; i<listenersLength; i++) {
+        functions.splice(i, 1);
+      }
+      
       return true;
     },
 
@@ -167,21 +189,35 @@ lces.rc[2] = function() {
       if (jSh.hasMultipleArgs(arguments, this))
         return;
       
-      if (!this.states[state])
+      var stateObj = this.states[state];
+      
+      if (!stateObj)
         throw ReferenceError("No such state");
-
-
-      var that = this;
-
-      for (linkedState in this.states[state].linkedStates) {
-        if (this.states[state].linkedStates.hasOwnProperty(linkedState))
-          that.unlinkStates(state, linkedState);
+      
+      var linkedStates = Object.getOwnPropertyNames(stateObj.linkedStates);
+      var unlinkStates = this.unlinkStates.bind(this);
+      
+      for (var i=0,l=linkedStates.length; i<l; i++) {
+        if (this.states[linkedStates[i]])
+          unlinkStates(state, linkedStates[i]);
       }
-
-      delete this.states[state];
-      delete this[state];
+      
+      stateObj.component = undf;
+      
+      this.states[state] = undf; // NOTICE: Used delete keyword FIX
+      delete this[state];        // TODO: FIX THIS
     },
-
+    
+    removeAllStates: function() {
+      var states = Object.getOwnPropertyNames(this.states);
+      
+      for (var i=0,l=states.length; i<l; i++) {
+        this.removeState(states[i]);
+      }
+      
+      return true;
+    },
+    
     linkStates: function(state1, state2, callback) {
       var that = this;
       if (!this.states[state1])
@@ -196,16 +232,26 @@ lces.rc[2] = function() {
 
 
       function listener(state) {
-        if (!callback && that.getState(state1) === that.getState(state2))
-          return true;
+        var callback = listener.callback;
+        var state1   = listener.state1;
+        var state2   = listener.state2;
         
+        var state1Value = that.getState(state1);
+        var state2Value = that.getState(state2);
+        
+        if (!callback && state1Value === state2Value)
+          return true;
         
         // Now to set the state in question
         if (state === state2)
-          that.setState(state1, callback ? callback(that.getState(state2)) : that.getState(state2));
+          that.setState(state1, callback ? callback(state2Value) : state2Value);
         else if (state === state1 && !callback)
-          that.setState(state2, that.getState(state1));
+          that.setState(state2, state1Value);
       };
+      
+      listener.callback = callback;
+      listener.state1   = state1;
+      listener.state2   = state2;
 
       this.states[state1].linkedStates[state2] = listener;
       this.states[state2].linkedStates[state1] = listener;
@@ -215,16 +261,20 @@ lces.rc[2] = function() {
     },
 
     unlinkStates: function(state1, state2) {
-      if (!this.states[state1] || !this.states[state1])
+      var stateObj1 = this.states[state1];
+      var stateObj2 = this.states[state2];
+      
+      if (!stateObj1 || !stateObj2)
         throw ReferenceError("No such state");
 
-      if (!this.states[state1].linkedStates[state2])
+      if (!stateObj1.linkedStates[state2])
         throw TypeError("[" + state1 + "] isn't linked to [" + state2 + "]");
 
 
-      this.removeStateListener("statechange", this.states[state1].linkedStates[state2]);
-      delete this.states[state1].linkedStates[state2];
-      delete this.states[state2].linkedStates[state1];
+      this.removeStateListener("statechange", stateObj1.linkedStates[state2]);
+      
+      stateObj1.linkedStates[state2] = undf;
+      stateObj2.linkedStates[state1] = undf;
 
       return true;
     },
@@ -268,7 +318,6 @@ lces.rc[2] = function() {
       };
       this.extensionData.push(data);
 
-
       component.apply(this, args.concat([data, LCES.EXTENDED_COMPONENT]));
     },
 
@@ -292,6 +341,14 @@ lces.rc[2] = function() {
         return false;
       
       this.events[event] = undf;
+    },
+    
+    removeAllEvents: function() {
+      var events = this.events;
+      
+      for (var i=0,l=events.length; i<l; i++) {
+        events[i] = undf;
+      }
     },
     
     triggerEvent: function(event, evtObj) {
@@ -325,21 +382,65 @@ lces.rc[2] = function() {
     },
     
     removeListener: function(event, listener) {
-      if (!event || jSh.type(event) !== "string" || !this.events[event])
+      var evtObj = this.events[event];
+      
+      if (!event || jSh.type(event) !== "string" || !evtObj)
         return false;
       
-      var index = this.events[event].listeners.indexOf(listener);
+      var index = evtObj.listeners.indexOf(listener);
       
       if (index !== -1)
-        this.events[event].listeners.splice(index, 1);
+        evtObj.listeners.splice(index, 1);
     }
   }
+  
+  // lcComponent custom setState method
+  function lcComponentSetState(state, stateStatus, recurring) {
+    var states    = this.states;
+    var _setState = this._setState.bind(this);
+    var stateObj  = states[state];
+    
+    var statechange = states.statechange;
+    
+    if (!recurring && stateObj && stateObj.stateStatus === stateStatus) {
+      _setState(state, stateStatus, recurring, true);
+      return false;
+    }
+      
+    var newstate = false;
+    if (!stateObj)
+      newstate = true;
 
+    if (!stateObj || !stateObj.flippedStateCall) {
+      _setState(state, stateStatus, recurring);
+      
+      var stateObj  = states[state];
+      
+      if (stateObj.oldStateStatus !== stateObj.stateStatus) {
+        if (!statechange.states[state])
+          statechange.states[state] = {};
+        
+        statechange.states[state].recurring = recurring;
+        
+        _setState("statechange", state, true);
+      }
+    } else {
+      if (stateObj.oldStateStatus !== stateObj.stateStatus) {
+        if (!statechange.states[state])
+          statechange.states[state] = {};
+        
+        statechange.states[state].recurring = recurring;
+        
+        _setState("statechange", state, true);
+      }
+      
+      _setState(state, stateStatus, recurring);
+    }
 
-
-
-
-
+    if (newstate)
+      _setState("newstate", state, true);
+  }
+  
   // AUCP LCES Constructors
 
   window.lcComponent = function() {
@@ -394,34 +495,12 @@ lces.rc[2] = function() {
 
     this.setState("statechange", "statechange");
     this.setState("newstate", "newstate");
-
+    
+    // Statechange state specifics
+    this.states["statechange"].states = {};
 
     this._setState = this.setState;
-    this.setState = function(state, stateStatus, recurring) {
-      if (!recurring && this.states[state] && this.states[state].stateStatus === stateStatus) {
-        this._setState(state, stateStatus, recurring, true);
-        return false;
-      }
-        
-      var newstate = false;
-      if (!this.states[state])
-        newstate = true;
-
-      if (!this.states[state] || !this.states[state].flippedStateCall) {
-        this._setState(state, stateStatus, recurring);
-        
-        if (this.states[state].oldStateStatus !== this.states[state].stateStatus)
-          this._setState("statechange", state, true);
-      } else {
-        if (this.states[state].oldStateStatus !== this.states[state].stateStatus)
-          this._setState("statechange", state, true);
-        
-        this._setState(state, stateStatus, recurring);
-      }
-
-      if (newstate)
-        this._setState("newstate", state, true);
-    }
+    this.setState  = lcComponentSetState;
     
     this.groups = [];
     
@@ -487,45 +566,78 @@ lces.rc[2] = function() {
     if (!extended)
       this.type = "LCES Group";
     
-    
     var that = this;
-    this.members = [];
+    var members  = [];
+    this.members = members;
     this.lastTrigger = {}; // lastTrigger[state] = LastTriggeringMember
     
+    var thatStates = that.states;
     
     // Add our main stuffs.
     jSh.extendObj(this, lcGroupMethods);
     
+    // Update members after a trigger
+    var updatingGroupState = false;
+    
+    function updateMembers(state, value, recurring) {
+      var that = updateMembers.that;
+      var members = updateMembers.members;
+      
+      for (var i=0,l=members.length; i<l; i++) {
+        var member = members[i];
+        
+        if (member.states[state] && member.states[state].stateStatus !== value || recurring){
+          if (!that.exclusiveMembers[state]) {
+            member._setState(state, value, recurring);
+            member._setState("statechange", state, true);
+          } else if (that.exclusiveMembers[state]) {
+            member._setState(state, that.isExclusiveMember(state, member) ? !that.getState(state) : that.getState(state));
+            member._setState("statechange", state, true);
+          }
+        }
+      }
+    }
+    
+    updateMembers.that    = that;
+    updateMembers.members = members;
     
     this.recurring = true;
     this.recurringMemberTrigger = true;
-    this.memberMethod = function(state) {
+    this.memberMethod = function mmethod(state) {
+      var that = mmethod.that;
+      var component = this.component;
+      
       if (that.states[state] && state !== "LCESName") {
         // Now to tell everyone else the news...
 
-        that.lastTrigger[state] = this.component;
-        that.setState(state, that.states[state].isExclusive ? that.getState(state) : this.component.getState(state), that.recurringMemberTrigger);
+        that.lastTrigger[state] = component;
+        
+        if (that.states[state].isExclusive) {
+          that.setState(state, that.getState(state), that.recurringMemberTrigger);
+        } else {
+          updateMembers(state, component.states[state].stateStatus);
+          
+          updatingGroupState = true;
+          that.setState(state, component.states[state].stateStatus);
+          updatingGroupState = false;
+        }
       }
     }
+    
+    this.memberMethod.that = that;
     
     this.setState("newmember", null);
 
     this.addStateListener("statechange", function(state) {
-
-      for (var i=0,l=that.members.length; i<l; i++) {
-        if (that.members[i].states[state] && !that.exclusiveMembers[state]) {
-          that.members[i]._setState(state, that.getState(state));
-          that.members[i]._setState("statechange", state, true);
-        } else if (that.members[i].states[state] && that.exclusiveMembers[state]) {
-          that.members[i]._setState(state, that.isExclusiveMember(state, that.members[i]) ? !that.getState(state) : that.getState(state));
-          that.members[i]._setState("statechange", state, true);
-        }
+      if (updatingGroupState) {
+        updatingGroupState = false;
+        
+        return;
       }
+      
+      if (state !== "LCESName")
+        updateMembers(state, that.states[state].stateStatus, this.states[state].recurring);
     });
-    
-    
-    
-    
     
     this.addStateListener("newstate", function(state) {
       that.states[state].isExclusive = false;
@@ -610,8 +722,6 @@ lces.rc[2] = function() {
   }
 
   window.lcRequest = function(args) { // args: {method, uri | url, callback, query, formData, async}
-
-
     var extended = lcComponent.call(this);
     if (!extended)
       this.type = "LCES Request";
@@ -724,8 +834,29 @@ lces.rc[2] = function() {
     var component = componentType ? new lces.types[componentType](arg) : new lcComponent(arg);
     return component;
   }
-
-
+  
+  // lces.deleteComponent
+  //
+  lces.deleteComponent = function(component) {
+    if (!component || !(component instanceof lcComponent)) {
+      console.error("LCES ERROR: Deleting component failed, invalid LCES component");
+      
+      return false;
+    }
+    
+    var LCESComponents = LCES.components;
+    
+    var LCESName = component.LCESName;
+    
+    LCESComponents[component.LCESID] = undf;
+    component.removeAllGroupLinks();
+    component.removeAllStates();
+    component.removeAllEvents();
+    
+    if (LCESName && LCESComponents[LCESName] === component)
+      LCESComponents[LCESName] = undf;
+  }
+  
   // Initiation functions system
   lces.initSystem = function() {
     var that = this;
@@ -764,18 +895,18 @@ lces.rc[2] = function() {
       var priorityArrays = Object.getOwnPropertyNames(this.initPriority);
       
       // Loop all priority arrays and their functions cautiously
-      priorityArrays.forEach(function(i) {
-        var pArray = that.initPriority[i];
+      for (var i=0,l=priorityArrays.length; i<l; i++) {
+        var pArray = that.initPriority[priorityArrays[i]];
         
-        pArray.forEach(function(i) {
+        for (var j=0,l2=pArray.length; j<l2; j++) {
           try {
-            i(); // Covers ears and hopes nothing blows up
+            pArray[j](); // Covers ears and hopes nothing blows up
           } catch (e) {
             // Ehhh, so, what happened????
             console.error(e);
           }
-        });
-      });
+        }
+      }
     };
   }
 
