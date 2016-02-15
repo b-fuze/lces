@@ -101,6 +101,41 @@ br2 {
 
 /* LCES Widgets Main Styling */
 
+.lces-scrollbars-visible *:hover>.lces-scrollbar-trough, .lces-scrollbars-visible .lces-scrollbar-trough.active {
+	opacity: 0.75;
+}
+
+.lces-scrollbars-visible .lces-scrollbar-trough {
+	opacity: 0.5;
+}
+
+.lces-scrollbar {
+	position: absolute;
+	width: 100%;
+}
+
+.lces-scrollbar-trough {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	width: 6px;
+	background: rgba(0, 0, 0, 0.075);
+	opacity: 0;
+	transition: opacity 200ms ease-out, width 200ms ease-out;
+}
+
+.lces-scrollbar-trough:hover, .lces-scrollbar-trough.active {
+	width: 9px;
+}
+
+.lces-scrollbar-trough.lc-sbright {
+	right: 0px;
+}
+
+.lces-scrollbar-trough.lc-sbleft {
+	left: 0px;
+}
+
 /* LCES Placeholder Styling */
 lces-placeholder {
 	display: none;

@@ -109,7 +109,25 @@ lces.rc[0] = function() {
     
     return obj;
   }
-
+  
+  // Similar to extendObj, but will go into deeper objects if they exist and merging the differences
+  jSh.mergeObj = function(obj, extension, dontReplaceObjects) {
+    function merge(curObj, curExt) {
+      Object.getOwnPropertyNames(curExt).forEach(function(i) {
+        var curProp    = curObj[i];
+        var curExtProp = curExt[i];
+        
+        if (jSh.type(curProp) === "object" && jSh.type(curExtProp) === "object")
+          merge(curProp, curExtProp);
+        else if (!dontReplaceObjects || jSh.type(curProp) !== "object")
+          curObj[i] = curExtProp;
+      });
+    }
+    
+    merge(obj, extension);
+    return obj;
+  }
+  
   // Make a function inherit another in the prototype chain
   jSh.inherit = function(child, parent) {
     child.prototype = Object.create(parent.prototype);
@@ -129,7 +147,13 @@ lces.rc[0] = function() {
     
     return str;
   }
-
+  
+  jSh.strCapitalise = function(str) {
+    str = str + "";
+    
+    return str[0].toUpperCase() + str.slice(1).toLowerCase();
+  }
+  
   // To silently mitigate any JSON parse error exceptions to prevent the whole from self destructing
   jSh.parseJSON = function(jsonstr) {
     var result;

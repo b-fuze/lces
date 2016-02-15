@@ -1,5 +1,5 @@
 // LCES DOM Components
-lces.rc[3] = function() {
+lces._WidgetInit = function() {
   
   // TODO: Wrap these for possible conflicts
   window.ih = function(s) {
@@ -388,10 +388,14 @@ lces.rc[3] = function() {
       
       if (widget.tagName.toLowerCase() !== "lces-widget") {
         var probableType = widget.getAttribute("lces-widget");
-        var widgetName = widget.getAttribute("lces-name");
+        var widgetName   = widget.getAttribute("lces-name");
+        var widgetClass  = widget.getAttribute("lces-class");
+        var widgetGroup  = widget.getAttribute("lces-group");
       } else {
         var probableType = widget.getAttribute("type");
-        var widgetName = widget.getAttribute("name");
+        var widgetName   = widget.getAttribute("name");
+        var widgetClass;
+        var widgetGroup  = widget.getAttribute("lces-group");
       }
       
       // Get the tagname
@@ -423,8 +427,34 @@ lces.rc[3] = function() {
 
       // Make our new widget
       var newWidget = new lces.types[type](jSh(widget));
+      
       if (widgetName)
         newWidget.LCESName = widgetName;
+        
+      if (jSh.type(widgetClass) === "string" && widgetClass.trim()) {
+        var widgetClasses = widgetClass.trim().split(/\s+/g);
+        
+        widgetClasses.forEach(function(i) {
+          if (!newWidget.container)
+            newWidget.classList.add(i);
+          else
+            newWidget.container.classList.add(i);
+        });
+      }
+      
+      if (jSh.type(widgetGroup) === "string" && widgetGroup.trim()) {
+        var wGroup = lces(widgetGroup);
+        
+        if (!wGroup) {
+          wGroup = new lcGroup();
+          wGroup.LCESName = widgetGroup;
+        } else if (!(wGroup instanceof lcGroup)) {
+          wGroup = null;
+        }
+        
+        if (wGroup)
+          wGroup.addMember(newWidget);
+      }
     }
   }
 

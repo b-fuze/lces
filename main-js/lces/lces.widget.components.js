@@ -1,5 +1,5 @@
 // LCES Widget Extra Components
-lces.rc[6] = function() {
+lces.rc[5] = function() {
   window.lcForm = function(e) {
     lcWidget.call(this, e || jSh.c("form"));
     
@@ -403,9 +403,7 @@ lces.rc[6] = function() {
     this.addStateListener("decimalPoints", this.states['digits'].functions[0]);
     this.addStateListener("integer", this.states['digits'].functions[0]);
     
-    
-    
-    // Now the event listeners for the element
+    // Add event listeners to the element
     this.testInt = new RegExp("^\\d{0," + this.digits + "}$");
     this.testFloat = new RegExp("^\\d{0," + this.digits + "}(?:\\.\\d{0," + this.decimalPoints + "})?$");
     this.testInput = function() {
@@ -422,12 +420,12 @@ lces.rc[6] = function() {
     this.addEventListener("change", this.testInput);
     
     this.increment = function() {
-      that.value = parseInt(that.element.value) + 1;
+      that.states.value.stateStatus = parseInt(that.element.value) + 1;
       that.testInput.call(that.element);
     }
     
     this.decrement = function() {
-      that.value = parseInt(that.element.value) - 1;
+      that.states.value.stateStatus = parseInt(that.element.value) - 1;
       that.testInput.call(that.element);
     }
     
@@ -673,7 +671,7 @@ lces.rc[6] = function() {
   jSh.inherit(lcCheckBox, lcTextField);
 
 
-  window.lcDropDownOption = function(value, content) {
+  window.lcDropDownOption = function(value, content, dropdown) {
     var that = this;
     lcWidget.call(this, jSh.d(".lcesoption"));
 
@@ -694,6 +692,12 @@ lces.rc[6] = function() {
       } else {
         that.element.removeAttribute("lces-selected");
       }
+    });
+    
+    this.addEventListener("click", function() {
+      dropdown.selectedOption = that;
+      
+      dropdown.menuvisible = false;
     });
   }
 
@@ -799,11 +803,11 @@ lces.rc[6] = function() {
     this.addEventListener("click", function(e) {
       var target = e.target || e.srcElement;
 
-      if (target.parentNode == that.optionsContainer.element) {
+      /*if (target.parentNode == that.optionsContainer.element) {
         that.selectedOption = target.component;
 
         that.menuvisible = false;
-      } else if (target == that.selectedDisplay.element || target == that.element) {
+      } else */if (target == that.selectedDisplay.element || target == that.element || jSh.isDescendant(target, that.selectedDisplay.element)) {
         that.menuvisible = !that.menuvisible; // Toggle the visibility of the menu
       }
     });
@@ -868,9 +872,10 @@ lces.rc[6] = function() {
     
     // Add option
     this.addOption = function(value, content) {
-      var newOption = new lcDropDownOption(value, content);
+      var newOption = new lcDropDownOption(value, content, this);
       
       this.options.push([value + "op", newOption.html, newOption]);
+      this.options[value + "op"] = newOption;
       
       newOption.parent = this.optionsContainer;
       
@@ -914,6 +919,13 @@ lces.rc[6] = function() {
       this.updateDropdownSize();
     }
     
+    this.removeAllOptions = function() {
+      that.options = [];
+      that.optionsContainer.remove(that.optionsContainer.children);
+      
+      that.value = null;
+    }
+    
     // Check for refElement and options
     if (e) {
       
@@ -923,13 +935,30 @@ lces.rc[6] = function() {
       // Add options
       var endValue = null;
       
-      var refOptions = jSh(e).jSh("option");
-      refOptions.forEach(function(i, index) {
-        var newOption = that.addOption(i.value, jSh.toArr(i.childNodes));
+      // Loop option elements
+      if (e.tagName.toLowerCase() === "select") {
+        var refOptions = jSh(e).jSh("option");
         
-        if (i.value == e.value || index === 0)
-          endValue = newOption;
-      });
+        refOptions.forEach(function(i, index) {
+          var newOption = that.addOption(i.value, jSh.toArr(i.childNodes));
+          
+          if (i.value == e.value || index === 0)
+            endValue = newOption;
+        });
+      } else if (e.tagName.toLowerCase() === "lces-widget") {
+        var refOptions = jSh(e).jSh("lces-option");
+        
+        refOptions.forEach(function(option, index) {
+          var valueAttr    = option.getAttribute("value");
+          var selectedAttr = option.getAttribute("selected") !== null && option.getAttribute("selected") !== "false";
+          
+          var value = valueAttr || "value" + that.options.length;
+          var newOption = that.addOption(value, jSh.toArr(option.childNodes));
+          
+          if (selectedAttr || index === 0)
+            endValue = newOption;
+        });
+      }
       
       this.selectedOption = endValue;
       
@@ -940,7 +969,7 @@ lces.rc[6] = function() {
     // End
     var selectedOption = this.selectedOption;
     this.value = undefined;
-    this.value = selectedOption.value;
+    this.value = selectedOption ? selectedOption.value : "";
   }
 
   jSh.inherit(lcDropDown, lcTextField);

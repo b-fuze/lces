@@ -1,4 +1,11 @@
-lces.rc[4] = function() {
+lces.rc[3] = function() {
+  var lces = window.lces;
+  var jSh  = window.jSh;
+  
+  // Add lcWidget core
+  lces._WidgetInit();
+  
+  // lcDraggable for draggable functionality Z
   window.lcDraggable = function(anchor, target) {
     var that = this;
     this._drag = {};
@@ -122,12 +129,189 @@ lces.rc[4] = function() {
   jSh.extendObj(lces.types, {
     "control": lcControl
   });
-
-
-
-
-
-
+  
+  // LCES Custom Scrollbars
+  lces.ui.scrollBarScroll = 35;
+  
+  lces.ui.scrollBars = [];
+  lces.ui.sbScroll   = function onwheel(e) {
+    this.lcesScrollbar.scroll(e.deltaY, e);
+  }
+  
+  // If LCES scrollbars enabled globally
+  var lcesSBSet = false;
+  
+  lces.ui.setState("scrollBarsEnabled", false);
+  lces.ui.addStateListener("scrollBarsEnabled", function(sbe) {
+    if (sbe && !lcesSBSet) {
+      lcesSBSet = true;
+      
+      // Make all scrollbars visible
+      jSh("body")[0].classList.add("lces-scrollbars-visible");
+      
+      var arr       = lces.ui.scrollBars;
+      var sbHandler = lces.ui.sbScroll;
+      
+      for (var i=0,l=arr.length; i<l; i++) {
+        var sb = arr[i];
+        
+        sb.parent.addEventListener("wheel", sbHandler);
+        sb.scrollContent.style.overflow = "hidden";
+      }
+    } else {
+      // Nothing to do here, prolly.
+    }
+  });
+  
+  window.lcScrollBars = function(e, scrollContent) {
+    if (!this.element && !e)
+      return false; // No scrolling box
+    
+    // Check for lcComponent
+    if (!(this instanceof lcComponent))
+      return new lcScrollBars(e);
+    
+    var trough = jSh.d(".lces-scrollbar-trough");
+    var elem = jSh.d(".lces-scrollbar");
+    
+    // Add scroller to trough
+    trough.appendChild(elem);
+    
+    var scrollbar    = new lcComponent();
+    this.lcesScrollbar = scrollbar;
+    
+    scrollbar.parent = e || this.element;
+    scrollbar.scrollContent = this.scrollbarContent || scrollContent || e; // I dunno how it'll work with e, but whatever.
+    scrollbar.scrollDist = lces.ui.scrollBarScroll;
+    
+    // Styling properties
+    scrollbar.marginTop = 0;
+    scrollbar.marginBottom = 0;
+    scrollbar.marginSide = 0;
+    scrollbar.side = this.scrollbarSide !== "left" ? "lc-sbright" : "lc-sbleft";
+    
+    // Scrolling properties
+    var contentScrolled   = 0;
+    var sbScrolled        = 0;
+    
+    var scrollTopMax      = 0;
+    var physicalScrollMax = 0;
+    
+    // Add to LCES scrollbar collection
+    lces.ui.scrollBars.push(scrollbar);
+    scrollbar.parent.appendChild(trough);
+    scrollbar.parent.lcesScrollbar = scrollbar;
+    
+    function updateContentScroll() {
+      contentScrolled = physicalScrollMax * (sbScrolled / scrollTopMax);
+      scrollbar.scrollContent.scrollTop = contentScrolled;
+    }
+    
+    scrollbar.scroll = function(dir, e) {
+      dir = dir > 0 ? 1 : -1;
+      var oldScroll = sbScrolled;
+      
+      sbScrolled = Math.min(Math.max(sbScrolled + lces.ui.scrollBarScroll * dir, 0), scrollTopMax);
+      elem.style.top = sbScrolled + "px";
+      
+      if (oldScroll !== sbScrolled) {
+        updateContentScroll();
+        
+        e.preventDefault();
+      }
+    }
+    
+    function windowMove(e) {
+      sbScrolled = Math.min(Math.max(windowMove.scroll + (e.clientY - windowMove.y), 0), scrollTopMax);
+      elem.style.top = sbScrolled + "px";
+      
+      updateContentScroll();
+    }
+    
+    trough.addEventListener("mousedown", function(e) {
+      var target = e.target || e.srcElement;
+      e.preventDefault();
+      
+      if (target === elem) {
+        windowMove.scroll = sbScrolled;
+        windowMove.y = e.clientY;
+        trough.classList.add("active");
+        
+        window.addEventListener("mousemove", windowMove);
+        window.addEventListener("mouseup", function mup() {
+          window.removeEventListener("mousemove", windowMove);
+          window.removeEventListener("mouseup", mup);
+          
+          trough.classList.remove("active");
+        });
+      } else {
+        var elemBCR = elem.getBoundingClientRect();
+        var top = (elemBCR.top + (e.clientY - elemBCR.top) - (elem.offsetHeight / 2)) - trough.getBoundingClientRect().top;
+        
+        sbScrolled = Math.min(Math.max(top, 0), scrollTopMax);
+        elem.style.top = sbScrolled + "px";
+        
+        updateContentScroll();
+      }
+    });
+    
+    // Update the height of the scrollbar for content changes
+    scrollbar.update = function() {
+      var scrollContent = scrollbar.scrollContent;
+      
+      // Get scrollcontent real height
+      var scrollCCS = getComputedStyle(scrollContent);
+      var scrollCHeight = scrollContent.offsetHeight;
+      scrollCHeight = scrollCHeight - parseInt(scrollCCS["borderTopWidth"]) - parseInt(scrollCCS["borderBottomWidth"]);
+      
+      // Get scrollparent real height
+      var parentCS = getComputedStyle(scrollbar.parent);
+      var scrollParentHeight = scrollbar.parent.offsetHeight;
+      scrollParentHeight = scrollParentHeight - parseInt(parentCS["borderTopWidth"]) - parseInt(parentCS["borderBottomWidth"]);
+      
+      var height = Math.max(30, (scrollCHeight / scrollContent.scrollHeight) * (scrollParentHeight - (scrollbar.marginTop + scrollbar.marginBottom)));
+      scrollTopMax = scrollParentHeight - height - (scrollbar.marginTop + scrollbar.marginBottom);
+      physicalScrollMax = Math.max(0, scrollContent.scrollHeight - scrollContent.offsetHeight);
+      
+      trough.classList.remove(scrollbar.side === "left" || scrollbar.side === "lc-sbleft" ? "lc-sbright" : "lc-sbleft");
+      trough.classList.add(scrollbar.side);
+      
+      elem.style.margin = "0px " + scrollbar.marginSide + "px";
+      elem.style.height = height + "px";
+      trough.style.top = scrollbar.marginTop + "px";
+      trough.style.bottom = scrollbar.marginBottom + "px";
+      
+      if (physicalScrollMax)
+        trough.style.display = "block";
+      else
+        trough.style.display = "none";
+      
+      // Reset scrollbar and content
+      elem.style.top = "0px";
+      sbScrolled = 0;
+      scrollContent.scrollTop = 0;
+    }
+    
+    if (lces.ui.scrollBarsEnabled) {
+      scrollbar.parent.addEventListener("wheel", lces.ui.sbScroll);
+      scrollbar.scrollContent.style.overflow = "hidden";
+    }
+    
+    scrollbar.update();
+  }
+  
+  jSh.inherit(lcScrollBars, lcComponent);
+  
+  function initLcScrollBars() {
+    window.addEventListener("wheel", function showScrollBars() {
+      lces.ui.scrollBarsEnabled = true;
+      
+      window.removeEventListener("wheel", showScrollBars);
+    });
+  }
+  
+  lces.addInit(initLcScrollBars);
+  
   // LCES Dynamic Text Feature
   //
 
@@ -141,6 +325,14 @@ lces.rc[4] = function() {
   // Add new tags here.
 
   lces.dynText.tags = {
+    "default": { // For when undefined types are requested
+      node: function(params, context) {
+        return new lcWidget(jSh.c("span", {attributes: {style: "font-weight: bold;"}}));
+      },
+      update: function() {
+        
+      }
+    },
     "text": {
       node: function(params, context) {
         return new lcWidget(jSh.c("span", {}));
@@ -731,8 +923,10 @@ lces.rc[4] = function() {
       
     // It's a tag
     } else if (entity.type !== "text") { // We shouldn't get here with this.allowTags on
-      entity.element = lces.dynText.tags[entity.type].node().element;
-      entity.element.update = lces.dynText.tags[entity.type].update;
+      var entityType = lces.dynText.tags[entity.type] ? entity.type : "default";
+      
+      entity.element = lces.dynText.tags[entityType].node().element;
+      entity.element.update = lces.dynText.tags[entityType].update;
       
       entity.parent.element.appendChild(entity.element);
       
@@ -1040,10 +1234,14 @@ lces.rc[4] = function() {
 
   window.addEventListener("resize", lces.ui.assertMobile);
   
+  // To know if using a mobile device
+  var mobileVendors = /Android|webOS|iPhone|iPod|BlackBerry|Windows Phone/i;
+  
+  lces.ui.mobileDevice = Math.max(screen.width || screen.availWidth, screen.height || screen.availHeight, 800) === 800 && mobileVendors.test(navigator.userAgent);
   
   // LCES URL API
-
-  lces.rc[11] = function() {
+  
+  
     lces.url = new lcComponent();
 
     // Store the triggers in the order of their appearance
@@ -1062,7 +1260,46 @@ lces.rc[4] = function() {
     //
     // Which is called like this, if like the latter example then no cp.:
     //  lces.url.cp.go("furnitures", "chairs")
-    lces.url.triggers = {};
+    lces.url.setState("triggers", {});
+    
+    lces.url.addStateCondition("triggers", function() {
+      var triggers = this.stateStatus;
+      
+      if (jSh.type(triggers) === "object") {
+        function removeParentLink(cur) {
+          cur.__ = null;
+          
+          var triggerNames = Object.getOwnPropertyNames(cur);
+          
+          for (var i=0,l=triggerNames.length; i<l; i++) {
+            if (triggerNames[i] !== "__" && jSh.type(cur[triggerNames[i]]) === "object")
+              removeParentLink(cur[triggerNames[i]]);
+          }
+        }
+        
+        removeParentLink(triggers);
+      }
+      
+      return true;
+    });
+    
+    lces.url.addStateListener("triggers", function(triggers) {
+      if (jSh.type(triggers) === "object") {
+        function addParentLink(prev, cur) {
+          if (prev)
+            cur.__ = prev;
+          
+          var triggerNames = Object.getOwnPropertyNames(cur);
+          
+          for (var i=0,l=triggerNames.length; i<l; i++) {
+            if (triggerNames[i] !== "__" && jSh.type(cur[triggerNames[i]]) === "object")
+              addParentLink(cur, cur[triggerNames[i]]);
+          }
+        }
+        
+        addParentLink(null, triggers);
+      }
+    });
 
     // A count of the triggers in url.triggers
     lces.url.setState("triggerCount", 0);
@@ -1150,11 +1387,11 @@ lces.rc[4] = function() {
       if (!func)
         return false;
       
-      return {func: func, args: args};
+      return {func: func.bind(curObject), args: args};
     }
-
+    
+    var history = window.history;
     lces.url.set = function(url) {
       history.pushState(null, null, url);
     }
-  }
 }
