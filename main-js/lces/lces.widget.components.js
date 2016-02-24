@@ -71,7 +71,7 @@ lces.rc[5] = function() {
     ])
   ])});
 
-  window.lcSlider = function(refElm) {
+  lces.global.lcSlider = function(refElm) {
     // Check if called as a template child
     var isTemplChild = lces.template.isChild(arguments, this);
     if (isTemplChild)

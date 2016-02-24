@@ -1,11 +1,11 @@
 // LCES User module core
 lces.rc[10] = function() {
-  var jSh     = window.jSh;
-  var lces    = window.lces;
-  var Object  = window.Object;
-  var Boolean = window.Boolean;
+  var jSh     = lces.global.jSh;
+  // var lces    = window.lces;
+  var Object  = lces.global.Object;
+  var Boolean = lces.global.Boolean;
   
-  var lcComponent = window.lcComponent;
+  var lcComponent = lces.global.lcComponent;
   
   // Create user module
   lces.user = new lcComponent();
@@ -17,7 +17,7 @@ lces.rc[10] = function() {
   // Setting entry constructor
   settings.Setting = function Setting(name, types, defValue, multiple) {
     // Check if not initialized
-    if (this === window || this === settings)
+    if (this === lces.global || this === settings)
       return new Setting(name, types, defValue, multiple);
     
     this.type = "LCES User Setting Entry";

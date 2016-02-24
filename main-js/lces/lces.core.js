@@ -1,24 +1,23 @@
 // LCES Core code, depends on jShorts2.js
+lces.global = this;
 
 lces.rc[2] = function() {
   // AUCP LCES JS code (Acronym Galore! :D)
 
-  // Some handy tools first...
-
   // On another note, these *LV* things might be useless...
-
-  window.LCESVar = function(n) {
+  
+  lces.global.LCESVar = function(n) {
     this.LCESVAR = true; // Might be needed in the future.
     this.id = n;
   }
-  window.LV = function(n) {
+  lces.global.LV = function(n) {
     return new LCESVar(n);
   }
-  window.isLV = function(v) {
+  lces.global.isLV = function(v) {
     return v instanceof LCESVar;
   }
 
-  window.LCES = {
+  lces.global.LCES = {
     // Core things go here
     EXTENDED_COMPONENT: LV(5), // I'll start from 5 because 0 or 1 can mean anything...
     BASE_COMPONENT: LV(6),
@@ -35,9 +34,9 @@ lces.rc[2] = function() {
   // ESSENTIAL COMPONENT METHODS
   
   // For faster reference
-  var Object = window.Object;
+  var Object = lces.global.Object || window.Object;
   
-  window.lcComponentMethods = {
+  lces.global.lcComponentMethods = {
     setState: function(state, stateStatus, recurring, recurred) {
       if (!this.states[state]) {
         // Since we don't have it, we'll make it.
@@ -443,7 +442,7 @@ lces.rc[2] = function() {
   
   // AUCP LCES Constructors
 
-  window.lcComponent = function() {
+  lces.global.lcComponent = function() {
     // This should be the fundamental building block
     // of the AUCP component linked event system. I can't
     // come up with something better to call it so just
@@ -561,7 +560,7 @@ lces.rc[2] = function() {
   lcComponent.prototype.constructor = lcComponent;
 
 
-  window.lcGroup = function() {
+  lces.global.lcGroup = function() {
     var extended = lcComponent.call(this);
     if (!extended)
       this.type = "LCES Group";
@@ -692,8 +691,7 @@ lces.rc[2] = function() {
 
   // LCES Server Related Components
 
-  window.lcData = function() { // This should be for stuff that is shared with the server's DB
-
+  lces.global.lcData = function() { // This should be for stuff that is shared with the server's DB
     var extended = lcComponent.call(this);
     if (!extended)
       this.type = "LCES Data Link";
@@ -721,24 +719,35 @@ lces.rc[2] = function() {
     });
   }
 
-  window.lcRequest = function(args) { // args: {method, uri | url, callback, query, formData, async}
+  lces.global.lcRequest = function(args) { // args: {method, uri | url, callback, query, formData, async}
     var extended = lcComponent.call(this);
     if (!extended)
       this.type = "LCES Request";
 
-    var that = this;
-
-
-    this.xhr = new XMLHttpRequest();
-    var xhr = this.xhr;
-
+    var that   = this;
+    this.xhr   = new XMLHttpRequest();
+    var  xhr   = this.xhr;
     this.abort = xhr.abort.bind(xhr);
-
-    xhr.onreadystatechange = args.callback;
+    
+    if (typeof (args.callback || args.success || args.fail) === "function") {
+      xhr.onreadystatechange = function() {
+        if (typeof args.callback === "function")
+          args.callback.call(this);
+        
+        if (this.readyState === 4) {
+          if (this.status === 200) {
+            if (typeof args.success === "function")
+              args.success.call(this);
+          } else {
+            if (typeof args.fail === "function")
+              args.fail.call(this);
+          }
+        }
+      }
+    }
 
     if (args.setup && typeof args.setup === "function")
       args.setup.call(xhr);
-
 
     if (args.query) {
       var queryString = "";
@@ -748,7 +757,6 @@ lces.rc[2] = function() {
           return encodeURIComponent(obj.join(","));
         if (jSh.type(obj) !== "object")
           return encodeURIComponent(obj.toString());
-
 
         var qs = "";
 
@@ -789,16 +797,28 @@ lces.rc[2] = function() {
       queryString = args.formData || "";
     }
 
-
     var method = !args.method || args.method.toLowerCase().indexOf("get") != -1 ? "GET" : "POST";
 
     xhr.open(method, (args.uri || args.url) + (method == "GET" ? (queryString ? "?" + queryString : "") : ""), args.async !== undf ? args.async : true);
 
     if (args.form)
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-
+    
     this.send = function() {
-      xhr.send(method == "POST" ? queryString : undf)
+      var oldCookies = document.cookie.split(/\s*;\s*/).map(function(c) {return [c.split("=")[0], c.split("=")[1]]});
+      
+      if (args.cookies === false) { // Remove all cookies
+        var time = (new Date());
+        time.setTime(0);
+        
+        oldCookies.forEach(function(c) {document.cookie = c[0] + "=; expires=" + time + "; path=/"});
+      }
+      
+      xhr.send(method == "POST" ? queryString : undf);
+      
+      if (args.cookies === false) { // Readd the cookies
+        setTimeout(function(){ oldCookies.forEach(function(c) {document.cookie = c[0] + "=" + c[1] + "; expires=; path=/"}) }, 50);
+      }
     }
   }
 
