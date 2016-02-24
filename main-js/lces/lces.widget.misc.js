@@ -1,8 +1,4 @@
 lces.rc[3] = function() {
-  var lces = window.lces;
-  var jSh  = window.jSh;
-  
-  // Add lcWidget core
   lces._WidgetInit();
   
   // lcDraggable for draggable functionality Z

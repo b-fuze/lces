@@ -2,13 +2,18 @@
 //
 // Supposed to shorten my writing of vanilla JS, some quick shortcuts.
 
+if (!this.lces)
+  lces = {rc: [], onlyjSh: true, global: this};
+else
+  lces.global = this;
+
 lces.rc[0] = function() {
   
-  window.undf = undefined;
-
+  lces.global.undf = undefined;
+  
   // Quick console prone errors mitigation
-  if (!window.console)
-    Object.defineProperty(window, "console", {
+  if (!lces.global.console)
+    Object.defineProperty(lces.global, "console", {
       value: {
         log: function() {},
         error: function() {},
@@ -20,11 +25,11 @@ lces.rc[0] = function() {
     });
 
   // Main DOM Manipulation function
-  window.jSh = function jSh(src, first) {
+  lces.global.jSh = function jSh(src, first) {
     if (typeof src === "string") {
       // "Locate" mode
       
-      var parent   = this === window ? document : (this instanceof Node || jSh.MockupElement && this instanceof jSh.MockupElement ? this : (lces && this instanceof lcWidget ? this.element : document));
+      var parent   = this === jSh.global ? document : (this instanceof Node || jSh.MockupElement && this instanceof jSh.MockupElement ? this : (lces.global.lcWidget && this instanceof lcWidget ? this.element : document));
       var selector = jSh.determineSelector(src);
       
       
@@ -47,7 +52,9 @@ lces.rc[0] = function() {
       return e;
     }
   }
-
+  
+  // Global
+  jSh.global = lces.global;
 
   // JS functions
 
@@ -126,6 +133,15 @@ lces.rc[0] = function() {
     
     merge(obj, extension);
     return obj;
+  }
+  
+  jSh.constProp = function(obj, propName, propValue) {
+    Object.defineProperty(obj, propName, {
+      configurable: false,
+      writable: false,
+      enumerable: true,
+      value: propValue
+    });
   }
   
   // Make a function inherit another in the prototype chain
@@ -272,7 +288,7 @@ lces.rc[0] = function() {
     if (attributes) {
       for (attr in attributes) {
         if (attributes.hasOwnProperty(attr)) {
-          if (!checkNSAttr.test(attr) || n instanceof jSh.MockupElement)
+          if (!checkNSAttr.test(attr) || jSh.MockupElement && n instanceof jSh.MockupElement)
             n.setAttribute(attr, attributes[attr]);
           else {
             var nsURI = attr.replace(/^ns:[^:]+:([^]*)$/i, "$1");
@@ -367,7 +383,21 @@ lces.rc[0] = function() {
     else
       return children[off];
   }
-
+  
+  jSh.getParent = function(jump) {
+    if (jSh.type(jump) !== "number" || jump < 0)
+      return null;
+    
+    var par = this;
+    while (jump > 0 && par !== document.body) {
+      par = par.parentNode;
+      
+      jump--;
+    }
+    
+    return par;
+  }
+  
   // Assert whether node 'e' is a child of node 'p'
   jSh.isDescendant = function(e, p) {
     var parent = e.parentNode;
@@ -398,9 +428,10 @@ lces.rc[0] = function() {
     
     // Check if should shorten
     if (e && !e.getChild) {
-      e.getChild = jSh.getChild;
-      e.on = jSh.onEvent;
-      e.jSh = jSh;
+      e.getParent = jSh.getParent;
+      e.getChild  = jSh.getChild;
+      e.on        = jSh.onEvent;
+      e.jSh       = jSh;
       
       // Improve append and removechild methods
       e.__apch = e.appendChild;
@@ -482,7 +513,7 @@ lces.rc[0] = function() {
     if (jSh.MockupElement && obj instanceof jSh.MockupElement)
       return obj;
     
-    if (obj instanceof lcWidget && obj.element instanceof Node)
+    if (lces.global.lcWidget && obj instanceof lcWidget && obj.element instanceof Node)
       return obj.element;
     
     return null
@@ -492,4 +523,6 @@ lces.rc[0] = function() {
   // A quick typo-fill :D
   var jSH = jSh;
 
-}
+};
+
+if (lces.onlyjSh) lces.rc[0]();

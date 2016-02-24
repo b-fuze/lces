@@ -150,9 +150,9 @@ lces.rc[4] = function() {
    * @returns {boolean} Returns false for a negative assertion, otherwise the newFunction to be appended to the MockupElement
    */
   lces.template.isChild = function(args, that) {
-    if (that === window) {
+    if (that === lces.global) {
       var newFunction = function templChild() {
-        if (this !== window) {
+        if (this !== lces.global) {
           var newElm = new templChild.templChildFunc();
           
           newElm.Component = newElm.component;
