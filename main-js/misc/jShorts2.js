@@ -223,7 +223,7 @@ lces.rc[0] = function() {
     if (typeof className == "object") {
       var args = className;
 
-      className  = args.className || args.class;
+      className  = args.className || args.class || args.sel;
       text       = args.text;
       child      = args.child || args.children;
       attributes = args.attributes || args.attr;
@@ -366,7 +366,9 @@ lces.rc[0] = function() {
       "ns:style:": style || ""
     });
   }
-
+  
+  jSh.docFrag = document.createDocumentFragment.bind(document);
+  
   // DOM Manipulation Functions
 
   jSh.getChild = function(off, length) {

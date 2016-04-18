@@ -17,7 +17,7 @@ lces.rc[7] = function() {
     
     // Check for the main window container grouping element
     if (!jSh("#windowcontainer"))
-      document.body.appendChild(jSh.d("#windowcontainer.lces-themify"));
+      document.body.appendChild(jSh.d({sel: "#windowcontainer.lces-themify", attr: {style: "text-align: left;"}}));
     
     // Get or create the window element
     if (!e) {
@@ -426,7 +426,7 @@ lces.rc[7] = function() {
     onTransitionEnd(this.container, function(e) {
       if (e.propertyName === "opacity" && getComputedStyle(this)["opacity"] == 0)
         this.parentNode.removeChild(this);
-    })
+    });
     
     // Remove window visible state
     clearTimeout(this._closingTimeout);

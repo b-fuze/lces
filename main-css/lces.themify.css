@@ -1,24 +1,30 @@
-.lcesoption:after, .lces-file, .lces-themify button, table.lces thead th:before, .lces-slider-scrubber{
-  background-color: #41B6BD;
+.lcesoption:after, .lces-file, .lces-themify button, table.lces thead th:before, .lces-slider-scrubber,
+.lces-togglebox, .lces-togglebox .lces-togglebox-handle .lces-togglebox-inner, .lces-scrollbar {
+  background-color: #800070;
 }
 .lces-acc-arrow svg, .checkboxsvg .checkboxcolor, .radiobuttonsvg .radionbuttoncolor, .genreremovesvg .genreremovecolor {
-  fill: #41B6BD;
+  fill: #800070;
 }
 .lcesoption:hover, .lcesoption[lces-selected], table.lces tr {
-  background-color: rgba(65,182,189,0.125);
+  background-color: rgba(128, 0, 112, 0.125);
 }
 hr.lces, input.lces[type="text"], input.lces[type="password"], textarea.lces, .lcesdropdown, .lcesdropdown .lcesoptions, table.lces thead th, .lces-slider, .lces-colorchooser .lces-cc-display, .lces-notification>div {
-  border-color: #41B6BD;
+  border-color: #800070;
 }
 .lces-accordion .lces-acc-section .lces-acc-title, .lces-window .lces-window-title, .lces-window .lces-window-buttonpanel {
-  background-color: rgba(65,182,189,0.1);
+  background-color: rgba(128, 0, 112, 0.1);
 }
-.lces-themify a, .lces-themify h1, .lces-themify h2, .lces-themify h3, .lces-themify h4, .lces-themify h5, .lces-themify h6, .lcesdropdown, table.lces tr, .lces-user-text-color, .lces-window .lces-window-title {
-  color: #41B6BD;
+.lces-themify a, .lces-themify h1, .lces-themify h2, .lces-themify h3, .lces-themify h4, .lces-themify h5, .lces-themify h6, .lcesdropdown, table.lces tr, .lces-user-text-color, .lces-window .lces-window-title,
+.lces-togglebox .lces-togglebox-handle .lces-togglebox-inner .lces-togglebox-text {
+  color: #800070;
 }
 .lces-accordion .lces-acc-section {
-  border-color: rgba(65,182,189,0.5);
+  border-color: rgba(128, 0, 112, 0.5);
 }
 table.lces tr[checker] {
-  background-color: rgba(65,182,189,0.02);
+  background-color: rgba(128, 0, 112, 0.02);
+}
+input.lces[type="text"]:focus, input.lces[type="password"]:focus, .lces-togglebox:focus {
+  box-shadow: 0px 0px 3px rgba(128, 0, 112, 0.5);
+  outline: none !important;
 }
