@@ -179,8 +179,6 @@ lces.rc[4] = function() {
   jSh.MockupElementMethods = {
     // Conversion/Copying functions
     construct: function(deep, clone, dynContext) {
-      var jSh = window.jSh;
-      
       var that   = this;
       var newElm = clone ? jSh.MockupElement(this.tagName) : jSh.e(this.tagName.toLowerCase());
       var nsElm  = newElm.nsElm;

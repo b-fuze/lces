@@ -65,6 +65,9 @@ lces.rc[2] = function() {
       var stateCond   = stateObject.conditions;
       var canContinue = true;
       
+      // Propose value during condition check
+      stateObject.proposedValue = stateStatus;
+      
       for (var i=0,l=stateCond.length; i<l; i++) {
         var condFunc = stateCond[i];
         
@@ -74,6 +77,9 @@ lces.rc[2] = function() {
         if (!canContinue)
           return false;
       }
+      
+      // Set from proposedValue
+      stateStatus = stateObject.proposedValue;
       
       if (stateObject.stateStatus === stateStatus && !recurring)
         return false;

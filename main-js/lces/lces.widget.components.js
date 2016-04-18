@@ -69,7 +69,7 @@ lces.rc[5] = function() {
     jSh.dm("lces-slider-scrubbar", undf, [
       jSh.dm("lces-slider-scrubber")
     ])
-  ])});
+  ], {tabindex: 0})});
 
   lces.global.lcSlider = function(refElm) {
     // Check if called as a template child
@@ -99,6 +99,13 @@ lces.rc[5] = function() {
     scrubbar.addEventListener("mousedown", function(e) {
       e.preventDefault();
       var target = e.target || e.srcElement;
+      
+      // Focus scrubbar
+      that.element.focus();
+      
+      // Update height in case of unforeseen changes
+      scrubbarWidth = scrubbar.offsetWidth;
+      scrubberWidth = scrubber.offsetWidth;
       
       var onScrub = function(e, scrubberTrig) {
         var sbRect = scrubbar.getBoundingClientRect();
@@ -130,7 +137,9 @@ lces.rc[5] = function() {
       // Update value
       if (!e.valueTriggered) {
         that.updatingValue = true;
-        that.value = that.min + (that.max - that.min) * (newOff / (scrubbarWidth - scrubberWidth - 2));
+        
+        var newValue = that.min + (that.max - that.min) * (newOff / (scrubbarWidth - scrubberWidth - 2));
+        that.value = !that.decimals ? Math.round(newValue) : newValue;
       } else {
         that.states["value"].oldStateStatus = that.value;
         that.states["value"].stateStatus = that.min + (that.max - that.min) * (newOff / (scrubbarWidth - scrubberWidth - 2));
@@ -176,6 +185,30 @@ lces.rc[5] = function() {
     this.displayValue = 0;
     this.decimals = true;
     
+    // For when focused
+    var keyIncr = {"37": -1, "39": 1, "38": 5, "40": -5};
+    
+    this.element.addEventListener("keydown", function(e) {
+      if (keyIncr[e.keyCode])
+        e.preventDefault();
+    });
+    this.element.addEventListener("keyup", function(e) {
+      if (e.keyCode === 37 || e.keyCode === 39) {
+        var newValue = that.value + keyIncr[e.keyCode];
+        
+        if (newValue >= that.min && newValue <= that.max)
+          that.value = !that.decimals ? Math.round(newValue) : newValue;
+      } else if (e.keyCode === 38 || e.keyCode === 40) {
+        var newValue = Math.max(Math.min(that.value + keyIncr[e.keyCode], that.max), that.min);
+        
+        that.value = !that.decimals ? Math.round(newValue) : newValue;
+      } else {
+        return false;
+      }
+      
+      e.preventDefault();
+    });
+    
     document.body.removeChild(this.element);
     
     if (refElm) {
@@ -183,8 +216,9 @@ lces.rc[5] = function() {
       var attrMax   = refElm.getAttribute("max");
       var prefix    = refElm.getAttribute("prefix");
       var suffix    = refElm.getAttribute("suffix");
-      var hideValue = refElm.getAttribute("hide-value")
+      var hideValue = refElm.getAttribute("hide-value");
       var decimals  = refElm.getAttribute("decimals");
+      var steps     = refElm.getAttribute("steps");
       
       if (!isNaN(parseFloat(attrMin))) {
         this.min = parseFloat(attrMin);
@@ -357,7 +391,7 @@ lces.rc[5] = function() {
   jSh.inherit(lcTextArea, lcTextField);
 
 
-  window.acceptableKeyCodes = {"48": "0", "49": "1", "50": "2", "51": "3", "52": "4", "53": "5", "54": "6", "55": "7", "56": "8", "57": "9", "37": "left_arrow", "38": "up_arrow", "39": "right_arrow", "40": "down_arrow", "46": "delete", "8": "backspace", "13": "enter", "16": "shift", "17": "ctrl", "18": "alt", "35": "end", "36": "home", "96": "numpad_0", "97": "numpad_1", "98": "numpad_2", "99": "numpad_3", "100": "numpad_4", "101": "numpad_5", "102": "numpad_6", "103": "numpad_7", "104": "numpad_8", "105": "numpad_9", "109": "subtract", "110": "decimal_point", "190": "period", "189": "dash" };
+  window.acceptableKeyCodes = {"9": "tab", "48": "0", "49": "1", "50": "2", "51": "3", "52": "4", "53": "5", "54": "6", "55": "7", "56": "8", "57": "9", "37": "left_arrow", "38": "up_arrow", "39": "right_arrow", "40": "down_arrow", "46": "delete", "8": "backspace", "13": "enter", "16": "shift", "17": "ctrl", "18": "alt", "35": "end", "36": "home", "96": "numpad_0", "97": "numpad_1", "98": "numpad_2", "99": "numpad_3", "100": "numpad_4", "101": "numpad_5", "102": "numpad_6", "103": "numpad_7", "104": "numpad_8", "105": "numpad_9", "109": "subtract", "110": "decimal_point", "190": "period", "189": "dash" };
 
   window.lcNumberField = function(e) {
     lcTextField.call(this, e ? e : jSh.c("input", {properties: {type: "text"}}));
@@ -377,11 +411,11 @@ lces.rc[5] = function() {
     
     
     // The NumberField specific properties
-    this.setState("min", -5);
-    this.setState("max", 100);
+    this.setState("min", null);
+    this.setState("max", null);
     this.setState("integer", false);
-    this.setState("digits", 0);
-    this.setState("decimalPoints", 0);
+    this.setState("digits", 5);
+    this.setState("decimalPoints", 5);
     
     // Get a char's width
     var _charWidth = jSh.c("span", undf, "X", undf, {style: "font-size: 15px; font-weight: bold;"});
@@ -407,26 +441,42 @@ lces.rc[5] = function() {
     this.testInt = new RegExp("^\\d{0," + this.digits + "}$");
     this.testFloat = new RegExp("^\\d{0," + this.digits + "}(?:\\.\\d{0," + this.decimalPoints + "})?$");
     this.testInput = function() {
-      if (that.integer && !that.testInt.test(this.value) || !that.integer && !that.testFloat.exec(this.value))
+      if (that.integer && !that.testInt.test(this.value) || !that.integer && !that.testFloat.exec(this.value)) {
         this.value = that.oldValue;
-      else if (jSh.type(that.min) == "number" && parseFloat(this.value) < that.min)
+      } else if (jSh.type(that.min) == "number" && parseFloat(this.value) < that.min) {
         this.value = that.min;
-      else if (jSh.type(that.max) == "number" && parseFloat(this.value) > that.max)
+      } else if (jSh.type(that.max) == "number" && parseFloat(this.value) > that.max) {
         this.value = that.max;
-      else
+      } else {
         that.oldValue = this.value;
+        
+        // New input has passed all tests
+        return true;
+      }
+      
+      return false;
     }
     
     this.addEventListener("change", this.testInput);
     
     this.increment = function() {
-      that.states.value.stateStatus = parseInt(that.element.value) + 1;
-      that.testInput.call(that.element);
+      var value = parseFloat(that.element.value) + 1
+      
+      var pass = that.testInput.call(that.element);
+      if (pass) this.value = value;
+      
+      if (!lces.ui.mobileDevice)
+        that.element.focus();
     }
     
     this.decrement = function() {
-      that.states.value.stateStatus = parseInt(that.element.value) - 1;
-      that.testInput.call(that.element);
+      var value = parseFloat(that.element.value) - 1;
+      
+      var pass = that.testInput.call(that.element);
+      if (pass) this.value = value;
+      
+      if (!lces.ui.mobileDevice)
+        that.element.focus();
     }
     
     this.addEventListener("keydown", function(e) {
@@ -505,6 +555,17 @@ lces.rc[5] = function() {
     
     upArrow.addEventListener("mouseup", clearBak);
     bottomArrow.addEventListener("mouseup", clearBak);
+    
+    // Reset parent state function from lcWidget
+    this.states["parent"].functions[0] = function(parent) {
+      if (parent) {
+        if (parent.isLCESComponent)
+          parent = parent.element;
+
+        parent.appendChild(that.container);
+      } else if (that.parent)
+        that.parent.removeChild(that.container);
+    }
   }
 
   jSh.inherit(lcNumberField, lcTextField);
@@ -669,8 +730,81 @@ lces.rc[5] = function() {
   }
 
   jSh.inherit(lcCheckBox, lcTextField);
-
-
+  
+  window.lcToggleField = function(e) {
+    lcWidget.call(this, jSh.d(".lces-togglebox", undf, [
+      jSh.d(".lces-togglebox-handle", undf, jSh.d(".lces-togglebox-inner", undf, [
+        jSh.d(".lces-togglebox-text", "OFF")
+      ]))
+    ]));
+    
+    var that = this;
+    var text = this.jSh(".lces-togglebox-text")[0];
+    var main = this.element;
+    
+    main.tabIndex = 0;
+    main.addEventListener("keyup", function(e) {
+      if (e.keyCode === 32) {
+        that.checked = !that.checked;
+        e.preventDefault();
+      }
+    });
+    
+    main.addEventListener("keydown", function(e) {
+      if (e.keyCode === 32)
+        e.preventDefault();
+    });
+    
+    this.setState("checked", null);
+    this.addStateListener("checked", function(checked) {
+      if (checked) {
+        that.element.classList.add("checked");
+        text.innerHTML = "ON";
+        
+      } else {
+        that.element.classList.remove("checked");
+        text.innerHTML = "OFF";
+      }
+    });
+    
+    this.addEventListener("click", function() {
+      that.checked = !that.checked;
+      
+      main.focus();
+    });
+    
+    this.addEventListener("mousedown", function(e) {
+      e.preventDefault();
+    });
+    
+    // Check for reference element
+    if (e) {
+      var checked = e.getAttribute("checked");
+      var refID   = e.getAttribute("id");
+      
+      if (checked !== null && checked.toLowerCase() !== "false")
+        this.checked = true;
+      else
+        this.checked = false;
+      
+      if (typeof refID === "string" && refID.trim()) {
+        var labels = LCESLoopLabels();
+        
+        if (labels[refID])
+          labels[refID].addEventListener("click", function() {
+            that.checked != that.checked;
+          });
+      }
+      
+      e.parentNode.insertBefore(this.element, e);
+      this.parent.removeChild(e);
+    } else {
+      this.checked = false;
+    }
+  }
+  
+  jSh.inherit(lcToggleField, lcCheckBox);
+  
   window.lcDropDownOption = function(value, content, dropdown) {
     var that = this;
     lcWidget.call(this, jSh.d(".lcesoption"));
@@ -700,10 +834,9 @@ lces.rc[5] = function() {
       dropdown.menuvisible = false;
     });
   }
-
+  
   jSh.inherit(lcDropDownOption, lcWidget);
-
-
+  
   window.lcDropDown = function(e) {
     var that = this;
     lcTextField.call(this, jSh.d(".lcesdropdown", undf, [
@@ -772,7 +905,9 @@ lces.rc[5] = function() {
       });
 
       that.selectedOption = option;
-      e.value = value;
+      
+      if (e)
+        e.value = value;
     });
 
     this.addStateListener("selectedOption", function(option) {
@@ -1348,6 +1483,7 @@ lces.rc[5] = function() {
   jSh.extendObj(lces.types, {
     "dropdown": lcDropDown,
     "checkbox": lcCheckBox,
+    "togglefield": lcToggleField,
     // "radio":
     "textfield": lcTextField,
     "textarea": lcTextArea,

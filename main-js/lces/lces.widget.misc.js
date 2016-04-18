@@ -134,8 +134,20 @@ lces.rc[3] = function() {
     this.lcesScrollbar.scroll(e.deltaY, e);
   }
   
+  lces.ui.sbScreen = jSh.d("lces-scrollbar-screen");
+  lces.ui.sbScreen.addEventListener("mouseover", function(e) {e.preventDefault();});
+  
   // If LCES scrollbars enabled globally
   var lcesSBSet = false;
+  
+  // Scrolling screen to prevent mouse from hovering over annoying things.
+  lces.ui.setState("sbScrolling", false);
+  lces.ui.addStateListener("sbScrolling", function(scrolling) {
+    if (scrolling)
+      lces.ui.sbScreen.classList.add("lces-sb-screen-visible");
+    else
+      lces.ui.sbScreen.classList.remove("lces-sb-screen-visible");
+  });
   
   lces.ui.setState("scrollBarsEnabled", false);
   lces.ui.addStateListener("scrollBarsEnabled", function(sbe) {
@@ -154,12 +166,14 @@ lces.rc[3] = function() {
         sb.parent.addEventListener("wheel", sbHandler);
         sb.scrollContent.style.overflow = "hidden";
       }
+      
+      document.body.appendChild(lces.ui.sbScreen);
     } else {
       // Nothing to do here, prolly.
     }
   });
   
-  window.lcScrollBars = function(e, scrollContent) {
+  window.lcScrollBars = function(e, scrollContent, autoupdate) {
     if (!this.element && !e)
       return false; // No scrolling box
     
@@ -167,23 +181,48 @@ lces.rc[3] = function() {
     if (!(this instanceof lcComponent))
       return new lcScrollBars(e);
     
+    var that   = this;
     var trough = jSh.d(".lces-scrollbar-trough");
-    var elem = jSh.d(".lces-scrollbar");
+    var elem   = jSh.d(".lces-scrollbar");
     
     // Add scroller to trough
     trough.appendChild(elem);
     
-    var scrollbar    = new lcComponent();
+    var scrollbar      = new lcComponent();
     this.lcesScrollbar = scrollbar;
     
-    scrollbar.parent = e || this.element;
     scrollbar.scrollContent = this.scrollbarContent || scrollContent || e; // I dunno how it'll work with e, but whatever.
-    scrollbar.scrollDist = lces.ui.scrollBarScroll;
+    scrollbar.scrollDist    = lces.ui.scrollBarScroll;
+    scrollbar.setState("visible", false);
+    
+    // For dynamic elements
+    scrollbar.addStateListener("parent", function(parent) {
+      if (parent instanceof lcWidget)
+        parent = parent.element;
+      
+      if (this.oldStateStatus && this.oldStateStatus !== (e || that.element)) {
+        this.oldStateStatus.lcesScrollbar = undf;
+        
+        this.oldStateStatus.removeEventListener("wheel", lces.ui.sbScroll);
+      }
+      
+      parent.appendChild(trough);
+      parent.lcesScrollbar = scrollbar;
+      parent.addEventListener("wheel", lces.ui.sbScroll);
+      
+      this.stateStatus = parent;
+    });
+    
+    scrollbar.addStateListener("visible", function(visible) {
+      trough.style.display = visible ? "block" : "none";
+    });
+    
+    scrollbar.setState("parent", e || this.element);
     
     // Styling properties
-    scrollbar.marginTop = 0;
+    scrollbar.marginTop    = 0;
     scrollbar.marginBottom = 0;
-    scrollbar.marginSide = 0;
+    scrollbar.marginSide   = 0;
     scrollbar.side = this.scrollbarSide !== "left" ? "lc-sbright" : "lc-sbleft";
     
     // Scrolling properties
@@ -195,8 +234,6 @@ lces.rc[3] = function() {
     
     // Add to LCES scrollbar collection
     lces.ui.scrollBars.push(scrollbar);
-    scrollbar.parent.appendChild(trough);
-    scrollbar.parent.lcesScrollbar = scrollbar;
     
     function updateContentScroll() {
       contentScrolled = physicalScrollMax * (sbScrolled / scrollTopMax);
@@ -233,12 +270,15 @@ lces.rc[3] = function() {
         windowMove.y = e.clientY;
         trough.classList.add("active");
         
+        lces.ui.sbScrolling = true;
+        
         window.addEventListener("mousemove", windowMove);
         window.addEventListener("mouseup", function mup() {
           window.removeEventListener("mousemove", windowMove);
           window.removeEventListener("mouseup", mup);
           
           trough.classList.remove("active");
+          lces.ui.sbScrolling = false;
         });
       } else {
         var elemBCR = elem.getBoundingClientRect();
@@ -1333,7 +1373,13 @@ lces.rc[3] = function() {
 
     // Methods
     lces.url.process = function() {
-      var url        = location.pathname.substr(1).split("/");
+      var loc        = location.pathname.substr(1);
+      
+      // Remove trailing slash if any
+      if (/^([^\/]+\/)+$/i.test(loc))
+        loc = loc.substr(0, loc.length - 1);
+      
+      var url        = loc.split("/");
       var startIndex = null;
       
       url.every(function(i, index) {
@@ -1358,7 +1404,7 @@ lces.rc[3] = function() {
         return typeof o === "function";
       }
       
-      url.every(function(i, index) {
+      url.every(function(i, index, arr) {
         if (index >= startIndex) {
           var curr = curObject ? curObject[url[index]] : lces.url.triggers[url[index]];
           
@@ -1366,7 +1412,12 @@ lces.rc[3] = function() {
             return false;
           }
           
-          if (isFunction(curr)) {
+          if (index === arr.length - 1 && jSh.type(curr) === "object" && isFunction(curr["."])) {
+            func = curr["."];
+            args = url.slice(index + 1);
+            
+            return false;
+          } else if (isFunction(curr)) {
             func = curr;
             args = url.slice(index + 1);
             
