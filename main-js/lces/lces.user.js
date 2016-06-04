@@ -229,9 +229,11 @@ lces.rc[10] = function() {
   settings.addEvent("settingChange");
   
   settings.manifest = function(defSettings) {
-    function scan(group, userGroup) {
+    function scan(group, userGroup, path) {
       Object.getOwnPropertyNames(group).forEach(function(name) {
         var sett = group[name];
+        var userValue;
+        var thisPath = (path ? path.concat([name]) : null) || [name];
         
         if (typeof sett === "object") {
           if (sett instanceof settings.Setting && !sett.name) {
@@ -243,6 +245,10 @@ lces.rc[10] = function() {
             userGroup.addEvent(name);
             userGroup.events[name].listeners = sett.functions;
             
+            // Check if the value was set here before
+            if (userGroup[name] !== undf)
+              userValue = userGroup[name];
+            
             userGroup.setState(name, sett.defValue);
             var settObj = userGroup.states[name];
             
@@ -250,20 +256,24 @@ lces.rc[10] = function() {
             userGroup.addStateCondition(name, sett.condition);
             
             userGroup._settings.push(name);
-          } else {
-            group = userGroup[name];
             
-            if (!group) {
-              group = new lcComponent();
+            // Attempt to set it's initial value
+            if (userValue !== undf)
+              lateSettings.push([thisPath.join("."), userValue]);
+          } else if (!(sett instanceof settings.Setting)) {
+            var subGroup = userGroup[name];
+            
+            if (!(subGroup instanceof lces.type())) {
+              subGroup = subGroup ? jSh.extendObj(new lces.new(), subGroup) : lces.new();
               
-              userGroup[name] = group;
+              userGroup[name] = subGroup;
               userGroup._groups.push(name);
               
-              group._settings = [];
-              group._groups   = [];
+              subGroup._settings = [];
+              subGroup._groups   = [];
             }
             
-            scan(sett, group);
+            scan(sett, subGroup, thisPath);
           }
         }
       });
@@ -373,7 +383,7 @@ lces.rc[10] = function() {
     return setting ? {
       path: path,
       type: setting.settType,
-      name: setting.name,
+      name: setting.settName,
       value: settings.settObtain(path, true),
       formalName: setting.settName,
       formalMultiple: setting.formalMultiple,
@@ -392,12 +402,15 @@ lces.rc[10] = function() {
   settings.on = function() {
     var path;
     var callback;
+    var first;
     
     jSh.toArr(arguments).forEach(function(arg) {
       if (typeof arg === "string" && !path)
         path = arg;
       else if (typeof arg === "function" && !callback)
         callback = arg;
+      else if (first === undf && typeof arg === "boolean")
+        first = arg;
     });
     
     if (!callback)
@@ -414,8 +427,20 @@ lces.rc[10] = function() {
     if (!setting)
       return false;
     
+    if (first && path)
+      callback({value: settings.settObtain(path, true)});
+    
     setting.functions.push(callback);
     return true;
+  }
+  
+  settings.clearLate = function() {
+    var late = lateSettings.slice();
+    lateSettings = [];
+    
+    for (var i=0,l=late.length; i<l; i++) {
+      settings.set(late[i][0], late[i][1]);
+    }
   }
   
   // Default settings, the template/base for any user settings
@@ -426,6 +451,9 @@ lces.rc[10] = function() {
     _settings: [],
     _groups: []
   };
+  
+  // Setting values that are initialized late
+  var lateSettings = [];
   
   settings.setState("user", null);
   settings.states["user"].get = function() {

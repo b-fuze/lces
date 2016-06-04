@@ -1,9 +1,7 @@
 // LCES Core code, depends on jShorts2.js
-lces.global = this;
 
 lces.rc[2] = function() {
-  // AUCP LCES JS code (Acronym Galore! :D)
-
+  // LCES JS code (Acronym Galore! :D)
   // On another note, these *LV* things might be useless...
   
   lces.global.LCESVar = function(n) {
@@ -591,7 +589,7 @@ lces.rc[2] = function() {
       for (var i=0,l=members.length; i<l; i++) {
         var member = members[i];
         
-        if (member.states[state] && member.states[state].stateStatus !== value || recurring){
+        if (member.states[state] && !member.states[state].private && member.states[state].stateStatus !== value || recurring){
           if (!that.exclusiveMembers[state]) {
             member._setState(state, value, recurring);
             member._setState("statechange", state, true);
@@ -612,7 +610,7 @@ lces.rc[2] = function() {
       var that = mmethod.that;
       var component = this.component;
       
-      if (that.states[state] && state !== "LCESName") {
+      if (that.states[state] && state !== "LCESName" && !that.states[state].private) {
         // Now to tell everyone else the news...
 
         that.lastTrigger[state] = component;
@@ -726,12 +724,17 @@ lces.rc[2] = function() {
   }
 
   lces.global.lcRequest = function(args) { // args: {method, uri | url, callback, query, formData, async}
+    // Check for args
+    args = jSh.type(args) === "object" ? args : null;
+    if (args === null)
+      return null;
+    
     var extended = lcComponent.call(this);
     if (!extended)
       this.type = "LCES Request";
-
+    
     var that   = this;
-    this.xhr   = new XMLHttpRequest();
+    this.xhr   = typeof args.__XMLHttpRequest === "function" ? new args.__XMLHttpRequest() : new XMLHttpRequest();
     var  xhr   = this.xhr;
     this.abort = xhr.abort.bind(xhr);
     
@@ -755,9 +758,9 @@ lces.rc[2] = function() {
     if (args.setup && typeof args.setup === "function")
       args.setup.call(xhr);
 
+    var queryString = "";
+    
     if (args.query) {
-      var queryString = "";
-
       function recursion(obj) {
         if (jSh.type(obj) === "array")
           return encodeURIComponent(obj.join(","));
@@ -833,32 +836,37 @@ lces.rc[2] = function() {
 
   // LCES Main functions
 
-  if (!window.lces)
+  if (!window.lces) // TODO: Likely redundant code, FIXME
     window.lces = function(lcesname) {
       return LCES.components[lcesname];
     }
 
   // Global container of all lces.types
   lces.types = {
+    "component": lcComponent,
+    "group": lcGroup
   }
-
+  
   // lces.noReference = Bool
   //
-  // Description: If true LCES won't save any reference to any components created
+  // If true LCES won't save any reference to any components created
   // it's set. But if set back to false LCES will store a refernce for every component.
   lces.noReference = false;
-
-  // lces.new(type, arg)
+  
+  // lces.new(type, [, arg1[, arg2[, ...]]])
   //
-  // type: Optional. String. The LCESType of the new component
-  // arg: Optional. Any type. The argument to pass to the constructor
+  // type: String. LCES Constructor type as registered in lces.types
   //
-  // Returns a new lces component instance of specified type if specified.
-  lces.new = function(type, arg) {
-    var componentType = type && lces.types[type.toLowerCase()] ? type.toLowerCase() : null;
+  // Returns a new instance of an LCES constructor of
+  lces.new = function(type) {
+    var args = jSh.toArr(arguments).slice(1);
+    var func = lces.types[type || "component"];
     
-    var component = componentType ? new lces.types[componentType](arg) : new lcComponent(arg);
-    return component;
+    return typeof func === "function" ? new (Function.prototype.bind.apply(func, [null].concat(args))) : null;
+  }
+  
+  lces.type = function(type) {
+    return lces.types[type || "component"];
   }
   
   // lces.deleteComponent

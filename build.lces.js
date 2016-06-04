@@ -48,8 +48,9 @@ function multipleArg(i, arr, dump, comma) {
 var out   = null;
 var cat   = null;
 var debug = null;
-var excl  = ["lces.ui.themify.js", "lces.core.js"];
+var excl  = ["lces.core.js"];
 var incl  = [];
+var themify;
 
 // Loop arguments
 var args = process.argv.slice(2);
@@ -80,6 +81,10 @@ for (var i=0,l=args.length; i<l; i++) {
   }
 }
 
+if (excl.indexOf("lces.ui.themify.js") === -1)
+  themify = true;
+excl.push("lces.ui.themify.js");
+
 // Get paths
 var LCPATH = path.dirname(process.argv[1]) + "/";
 var LCOUT  = out || `${LCPATH}build/bleeding/lces.build.${time}.js`;
@@ -97,6 +102,12 @@ var special = {
     src = src.replace(/LCES_STYLES_CORE/, coreStyles);
     src = src.replace(/LCES_STYLES_RESPONSIVE/, coreStyles);
     src = src.replace(/LCES_STYLES_THEMIFY/, themeStyles);
+    
+    return src;
+  },
+  
+  "jShorts2.js": function(src) {
+    src = src.replace("if (!this.lces)\n  lces = {rc: [], onlyjSh: true, global: this};\nelse\n  lces.global = this;", "");
     
     return src;
   }
@@ -177,7 +188,8 @@ function uglify(src) {
 getFile(LCPATH + "main-js/misc/jShorts2.js");
 getFile(LCPATH + "main-js/misc/css.essentials.js");
 getFile(LCPATH + "main-js/lces/lces.core.js");
-getFile(LCPATH + "main-js/lces/lces.ui.themify.js");
+if (themify)
+  getFile(LCPATH + "main-js/lces/lces.ui.themify.js");
 
 // Get core modules
 getFolder(LCPATH + "main-js/lces");
@@ -192,6 +204,10 @@ result = cat ? result : uglify(result);
 
 // Concat everything
 result = `${debug ? `try { ` : ""} ${result} ${debug ? ` } catch (e) { alert(e + "\\n\\n\\n" + e.stack); }` : ""}`;
+
+// Remove strict
+if (!cat)
+  result = result.replace(/^\s* "use strict";/, "");
 
 // Write it out
 fs.writeFileSync(LCOUT, result);

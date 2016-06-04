@@ -186,6 +186,7 @@ lces-placeholder {
 }
 
 .lcescontrol[disabled] * {
+  pointer-events: none;
   cursor: default !important;
 }
 
@@ -200,14 +201,6 @@ lces-placeholder {
 }
 
 /* LCES Window Styling */
-
-/* LCES Notifications */
-
-.lces-notification>div {
-  background: transparent;
-  transition: height 400ms ease-out;
-  overflow: hidden;
-}
 
 /* LCES TextField Styling */
 
@@ -375,6 +368,24 @@ input.lces.lces-numberfield {
 
 /* LCES Colorfield Widget */
 
+#lces-colorchoosermodalcontainer {
+  position: fixed;
+  z-index: 999999999;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  transform: translateX(-100%);
+  -webkit-transform: translateX(-100%);
+  transition: transform 0ms linear 250ms;
+  
+  &.visible {
+    transition: transform 0ms linear 0ms;
+    transform: translateX(0px);
+    -webkit-transform: translateX(0px);
+  }
+}
+
 .lces-colorchooser {
   position: relative;
   top: -3px;
@@ -413,7 +424,7 @@ input.lces.lces-numberfield {
   opacity: 0;
   transform-origin: 0% 0%;
   transform: scale(0.85);
-  transition: transform 250ms ease-out, opacity 250ms ease-out;
+  transition: transform 150ms $smooth-transition-function, opacity 150ms $smooth-transition-function;
   
   &.flipped {
     /*top: auto;
@@ -486,6 +497,7 @@ input.lces.lces-numberfield {
   .lces-slider {
     margin-top: 7px;
     border-width: 1px;
+    outline: 0px !important;
   }
 }
 
@@ -743,6 +755,40 @@ input.lces.lces-numberfield {
 
 /* LCES DropDown Styling */
 
+.lces-dropdown-screen {
+  position: fixed;
+  z-index: 9999999999;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  transform: translate3d(-100%, 0px, 0px);
+  
+  &.visible {
+    transform: translate3d(0px, 0px, 0px);
+  }
+  
+  .lcesdropdown {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: auto;
+    bottom: auto;
+    margin: 0px;
+    border-color: transparent !important;
+    background: transparent !important;
+    
+    .lcesselected, .lcesdropdown-arrow {
+      opacity: 0 !important;
+      // pointer-events: none;
+    }
+  
+    * {
+      // pointer-events: auto;
+    }
+  }
+}
+
 .lcesdropdown {
   position: relative;
   vertical-align: middle;
@@ -764,7 +810,9 @@ input.lces.lces-numberfield {
   
   .lcesdropdown-arrow {
     position: absolute;
-    top: 9px;
+    top: 0px;
+    bottom: 0px;
+    margin: auto 0px;
     right: -18px;
     height: 6px;
     width: 10px;
@@ -789,10 +837,9 @@ input.lces.lces-numberfield {
     background: #fff;
     box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.2);
     transform-origin: 50% 0%;
-    transform: scale(0.85);
+    transform: scale(0.90);
     opacity: 0;
-    display: none;
-    transition: transform 250ms ease-out, opacity 250ms ease-out;
+    transition: transform 200ms $smooth-transition-function, opacity 200ms $smooth-transition-function;
   }
   
   &.visible .lcesoptions {
@@ -810,9 +857,8 @@ input.lces.lces-numberfield {
   }
   
   .lcesselected {
+    
   }
-  
-  
 }
 
 .lcesoption {
@@ -970,7 +1016,7 @@ table.lces tr td {
 .lces-notification[visible] {
   opacity: 0.9;
 }
-.lces-notification>div {
+.lces-notification > div {
   /*background: transparent !important;*/
   padding: 0px;
   margin: 4px 0px;
@@ -978,14 +1024,15 @@ table.lces tr td {
   border-radius: 3px;
   background: #fff;
   overflow: hidden;
+  transition: height 400ms $smooth-transition-function;
 }
 
-.lces-window.lces-notification>div>div {
+.lces-window.lces-notification > div > div {
   background: rgba(0,0,0,0.025);
   box-shadow: none;
 }
 
-.notification-alignment.notifi-relative .lces-notification>div {
+.notification-alignment.notifi-relative .lces-notification > div {
   margin: 0px !important;
 }
 

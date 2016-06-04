@@ -2,13 +2,17 @@
 //
 // Supposed to shorten my writing of vanilla JS, some quick shortcuts.
 
-if (!this.lces)
-  lces = {rc: [], onlyjSh: true, global: this};
+function getGlobal() {
+  return this;
+}
+
+if (!getGlobal().lces)
+  lces = {rc: [], onlyjSh: true, global: getGlobal()};
 else
-  lces.global = this;
+  lces.global = getGlobal();
 
 lces.rc[0] = function() {
-  
+  lces.global = !lces.global ? window : lces.global;
   lces.global.undf = undefined;
   
   // Quick console prone errors mitigation
@@ -26,14 +30,49 @@ lces.rc[0] = function() {
 
   // Main DOM Manipulation function
   lces.global.jSh = function jSh(src, first) {
-    if (typeof src === "string") {
+    if (typeof src === "string" || typeof src === "number") {
       // "Locate" mode
       
       var parent   = this === jSh.global ? document : (this instanceof Node || jSh.MockupElement && this instanceof jSh.MockupElement ? this : (lces.global.lcWidget && this instanceof lcWidget ? this.element : document));
       var selector = jSh.determineSelector(src);
+      var result   = jSh[selector](selector === "queryAll" || selector === "tag" || selector === "getChild" ? src : src.substr(1), parent, first);
       
+      // Shorten them
+      if (result) {
+        if (jSh.type(result) === "array") {
+          for (var i=0,l=result.length; i<l; i++) {
+            var elm = result[i];
+            
+            if (!elm.jSh) {
+              elm.getParent = jSh.getParent;
+              elm.getChild  = jSh.getChild;
+              elm.on        = jSh.onEvent;
+              elm.jSh       = jSh;
+              
+              // Improve append and removechild methods
+              elm.__apch = elm.appendChild;
+              elm.__rmch = elm.removeChild;
+              
+              elm.appendChild = jSh.elementExt.appendChild;
+              elm.removeChild = jSh.elementExt.removeChild;
+            }
+          }
+        } else if (!result.jSh) {
+          result.getParent = jSh.getParent;
+          result.getChild  = jSh.getChild;
+          result.on        = jSh.onEvent;
+          result.jSh       = jSh;
+          
+          // Improve append and removechild methods
+          result.__apch = result.appendChild;
+          result.__rmch = result.removeChild;
+          
+          result.appendChild = jSh.elementExt.appendChild;
+          result.removeChild = jSh.elementExt.removeChild;
+        }
+      }
       
-      return jSh.shorten(jSh[selector](selector === "queryAll" || selector === "tag"? src : src.substr(1), parent, first));
+      return result;
     } else {
       // "Shorten" mode
       // In this mode «first» is referring to whether to enclose it in an lcWidget
@@ -70,7 +109,8 @@ lces.rc[0] = function() {
       array.push(i);
     });
   }
-
+  
+  // Remove multiple items from an array
   jSh.spliceItem = function(array) {
     var items = jSh.toArr(arguments).slice(1);
     
@@ -118,7 +158,7 @@ lces.rc[0] = function() {
   }
   
   // Similar to extendObj, but will go into deeper objects if they exist and merging the differences
-  jSh.mergeObj = function(obj, extension, dontReplaceObjects) {
+  jSh.mergeObj = function(obj, extension, dontReplaceObjects, dontReplaceValues) {
     function merge(curObj, curExt) {
       Object.getOwnPropertyNames(curExt).forEach(function(i) {
         var curProp    = curObj[i];
@@ -126,7 +166,9 @@ lces.rc[0] = function() {
         
         if (jSh.type(curProp) === "object" && jSh.type(curExtProp) === "object")
           merge(curProp, curExtProp);
-        else if (!dontReplaceObjects || jSh.type(curProp) !== "object")
+        else if (dontReplaceValues && curProp === undf)
+          curObj[i] = curExtProp;
+        else if (!dontReplaceObjects || jSh.type(curProp) !== "object" && (!dontReplaceValues || curProp === undf))
           curObj[i] = curExtProp;
       });
     }
@@ -170,6 +212,19 @@ lces.rc[0] = function() {
     return str[0].toUpperCase() + str.slice(1).toLowerCase();
   }
   
+  // Options determining utils
+  jSh.boolOp = function(src, def) {
+    return src !== undefined ? !!src : def;
+  }
+
+  jSh.numOp = function(src, def) {
+    return !isNaN(src) && typeof src === "number" && src > -Infinity && src < Infinity ? parseFloat(src) : def;
+  }
+
+  jSh.strOp = function(src, def) {
+    return typeof src === "string" && src ? src : def;
+  }
+  
   // To silently mitigate any JSON parse error exceptions to prevent the whole from self destructing
   jSh.parseJSON = function(jsonstr) {
     var result;
@@ -198,7 +253,7 @@ lces.rc[0] = function() {
   jSh.d = function node(className, text, child, attributes, properties, events) { // For creating an element
     var nsElm; // For things like SVG... Ugggh. :|
     
-    if (!this.lcesElement){
+    if (!this.lcesElement) {
       // Check if we need to make an element with a custom namespace URI
       if (this.lcesType) {
         var nsCheck = /^ns:[\w\d_]+:[^]+$/i.test(this.lcesType);
@@ -367,15 +422,31 @@ lces.rc[0] = function() {
     });
   }
   
-  jSh.docFrag = document.createDocumentFragment.bind(document);
+  // Check if in browser environment
+  if (lces.global.document)
+    jSh.docFrag = document.createDocumentFragment.bind(document);
   
   // DOM Manipulation Functions
 
   jSh.getChild = function(off, length) {
-    var children = jSh.toArr(this.childNodes).filter(function(i) {return i.nodeType === Node.ELEMENT_NODE ? (!jSh(i) || true) : false;});
+    var parent = typeof length === "object" ? length : this;
+    var children = jSh.toArr(parent.childNodes);
+    var check = [];
+    var ELM_NODE = Node.ELEMENT_NODE;
+    
+    for (var i=children.length-1; i>=0; i--) {
+      var child = children[i];
+      
+      if (child.nodeType === ELM_NODE) {
+        check.push(child);
+        
+        if (!child.jSh)
+          jSh.shorten(child);
+      }
+    }
     
     if (off < 0)
-      off = children.length + off;
+      off = check.length + off;
     
     if (!children[off])
       return null;
@@ -439,22 +510,39 @@ lces.rc[0] = function() {
       e.__apch = e.appendChild;
       e.__rmch = e.removeChild;
       
-      e.appendChild = function(ch) {
-        if (jSh.hasMultipleArgs(arguments, this))
-          return undf;
-        
-        e.__apch(ch);
-      }
-      
-      e.removeChild = function(ch) {
-        if (jSh.hasMultipleArgs(arguments, this))
-          return undf;
-        
-        e.__rmch(ch);
-      }
+      e.appendChild = jSh.elementExt.appendChild;
+      e.removeChild = jSh.elementExt.removeChild;
     }
     
     return e;
+  }
+  
+  jSh.elementExt = {
+    appendChild: function() {
+      var children = jSh.toArr(arguments);
+      
+      if (jSh.type(children[0]) === "array")
+        children = children[0];
+      
+      for (var i=0,l=children.length; i<l; i++) {
+        this.__apch(children[i]);
+      }
+    },
+    removeChild: function() {
+      var children = jSh.toArr(arguments);
+      
+      if (jSh.type(children[0]) === "array")
+        children = children[0];
+      
+      for (var i=0,l=children.length; i<l; i++) {
+        this.__rmch(children[i]);
+      }
+      
+      if (children.length === 1)
+        return children[0];
+      else
+        return children;
+    }
   }
 
   jSh.id = function(id, parent) { // Compatible with MockupElement and normal # selection
@@ -490,7 +578,9 @@ lces.rc[0] = function() {
   // If it doesn't pass any of these tests, then query selector is used.
 
   jSh.determineSelector = function(str) {
-    if (jSh.isID.test(str)) {
+    if (typeof str === "number") {
+      return "getChild";
+    } else if (jSh.isID.test(str)) {
       return "id";
     } else if (jSh.isClass.test(str)) {
       return "class";
@@ -524,7 +614,11 @@ lces.rc[0] = function() {
 
   // A quick typo-fill :D
   var jSH = jSh;
-
 };
 
-if (lces.onlyjSh) lces.rc[0]();
+if (lces.onlyjSh)
+  lces.rc[0]();
+
+// Check if NPM module
+if (lces.global.global && !lces.global.window)
+  module.exports = jSh;

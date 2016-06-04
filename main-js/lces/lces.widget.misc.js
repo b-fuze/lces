@@ -62,7 +62,7 @@ lces.rc[3] = function() {
   //
   // newControl.disable: Bool
   //  - When true, the underlying children are not accessible
-  //  - by the enduser, when set to false access is restored.
+  //  - by the end user, when set to false access is restored.
   window.lcControl = function(e) {
     lcWidget.call(this, e || jSh.d("lcescontrol"));
     var that = this;
@@ -70,7 +70,15 @@ lces.rc[3] = function() {
     
     this.classList.add("lcescontrol");
     
-    this.inputs = jSh.toArr(this.element.getElementsByTagName("input")).concat(jSh.toArr(this.element.getElementsByTagName("button")));
+    this.setState("inputs", null);
+    this.states["inputs"].get = function() {
+      return [].concat(
+        jSh.toArr(that.element.getElementsByTagName("input")),
+        jSh.toArr(that.element.getElementsByTagName("textarea")),
+        jSh.toArr(that.element.getElementsByTagName("button")),
+        that.element.jSh("div[tabindex=\"0\"]")
+      );
+    }
     
     this.onMousedown = function(e) {
       e.preventDefault();
@@ -83,7 +91,7 @@ lces.rc[3] = function() {
         this.blur();
     }
     
-    this.clickCatcher = jSh.d("lcescontrolclick");
+    this.clickCatcher = jSh.c("lces-control-click", ".lcescontrolclick");
     this.clickCatcher.addEventListener("mousedown", this.onMousedown);
     this.appendChild(this.clickCatcher);
     
@@ -101,14 +109,22 @@ lces.rc[3] = function() {
         
         that.clickCatcher.style.display = "block";
         
-        that.inputs.forEach(function(i) {i.addEventListener("focus", that.onFocus);});
+        // Prevent focusing on child input elements
+        var inputs = that.inputs;
+        for (var i=0,l=inputs.length; i<l; i++) {
+          inputs[i].addEventListener("focus", that.onFocus);
+          inputs[i].blur();
+        }
       } else {
         that.element.removeAttribute("disabled");
         that.element.removeEventListener("mousedown", that.onMousedown);
         
         that.clickCatcher.style.display = "none";
         
-        that.inputs.forEach(function(i) {i.removeEventListener("focus", that.onFocus);});
+        var inputs = that.inputs;
+        for (var i=0,l=inputs.length; i<l; i++) {
+          inputs[i].removeEventListener("focus", that.onFocus);
+        }
       }
     });
     
@@ -127,11 +143,12 @@ lces.rc[3] = function() {
   });
   
   // LCES Custom Scrollbars
-  lces.ui.scrollBarScroll = 35;
+  lces.ui.scrollBarScroll = 45;
   
   lces.ui.scrollBars = [];
   lces.ui.sbScroll   = function onwheel(e) {
-    this.lcesScrollbar.scroll(e.deltaY, e);
+    if (this.lcesScrollbar.visible)
+      this.lcesScrollbar.scroll(e.deltaY, e);
   }
   
   lces.ui.sbScreen = jSh.d("lces-scrollbar-screen");
@@ -235,20 +252,25 @@ lces.rc[3] = function() {
     // Add to LCES scrollbar collection
     lces.ui.scrollBars.push(scrollbar);
     
-    function updateContentScroll() {
-      contentScrolled = physicalScrollMax * (sbScrolled / scrollTopMax);
-      scrollbar.scrollContent.scrollTop = contentScrolled;
+    function updateContentScroll(contentTrigger) {
+      if (!contentTrigger) {
+        contentScrolled = physicalScrollMax * (sbScrolled / scrollTopMax);
+        scrollbar.scrollContent.scrollTop = contentScrolled;
+      } else {
+        elem.style.top = ((contentScrolled / physicalScrollMax) * scrollTopMax) + "px";
+      }
     }
     
     scrollbar.scroll = function(dir, e) {
       dir = dir > 0 ? 1 : -1;
-      var oldScroll = sbScrolled;
+      var oldScroll = contentScrolled;
       
-      sbScrolled = Math.min(Math.max(sbScrolled + lces.ui.scrollBarScroll * dir, 0), scrollTopMax);
-      elem.style.top = sbScrolled + "px";
+      contentScrolled = Math.min(Math.max(contentScrolled + lces.ui.scrollBarScroll * dir, 0), physicalScrollMax);
+      scrollbar.scrollContent.scrollTop = contentScrolled;
+      // elem.style.top = sbScrolled + "px"; // TODO: Remove when fully switched reliance to content instead of scrollbar
       
       if (oldScroll !== sbScrolled) {
-        updateContentScroll();
+        updateContentScroll(true);
         
         e.preventDefault();
       }
@@ -292,13 +314,13 @@ lces.rc[3] = function() {
     });
     
     // Update the height of the scrollbar for content changes
-    scrollbar.update = function() {
+    scrollbar.update = function(hard) {
       var scrollContent = scrollbar.scrollContent;
       
       // Get scrollcontent real height
       var scrollCCS = getComputedStyle(scrollContent);
       var scrollCHeight = scrollContent.offsetHeight;
-      scrollCHeight = scrollCHeight - parseInt(scrollCCS["borderTopWidth"]) - parseInt(scrollCCS["borderBottomWidth"]);
+      scrollCHeight = scrollCHeight - jSh.numOp(parseInt(scrollCCS["borderTopWidth"]), 0) - jSh.numOp(parseInt(scrollCCS["borderBottomWidth"]), 0);
       
       // Get scrollparent real height
       var parentCS = getComputedStyle(scrollbar.parent);
@@ -322,10 +344,12 @@ lces.rc[3] = function() {
       else
         trough.style.display = "none";
       
-      // Reset scrollbar and content
-      elem.style.top = "0px";
-      sbScrolled = 0;
-      scrollContent.scrollTop = 0;
+      // Reset scrollbar and content TODO: Check and remove this, it's unhelpful
+      var oldRatio = jSh.numOp(sbScrolled, 0) === 0 ? 1 : Math.min(sbScrolled, scrollTopMax) / sbScrolled;
+      
+      elem.style.top = Math.min(sbScrolled, scrollTopMax) + "px";
+      sbScrolled = Math.min(jSh.numOp(sbScrolled, 0), scrollTopMax);
+      scrollContent.scrollTop = Math.min(physicalScrollMax, scrollContent.scrollTop);
     }
     
     if (lces.ui.scrollBarsEnabled) {
@@ -413,6 +437,28 @@ lces.rc[3] = function() {
         }
       }
     },
+    "font": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("span", {attributes: {style: "font-family: \"" + params + "\";"}}));
+      },
+      update: function(s) {
+        s = (s + "").trim();
+        
+        this.component.style = {
+          fontFamily: (s[0] !== "\"" ? "\"" : "") + s + (s[s.length - 1] !== "\"" ? "\"" : "")
+        };
+      }
+    },
+    "size": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("span", {attributes: {style: "font-size: " + params + ";"}}));
+      },
+      update: function(s) {
+        this.component.style = {
+          fontSize: s
+        };
+      }
+    },
     "b": {
       node: function(params, context) {
         return new lcWidget(jSh.c("span", {attributes: {style: "font-weight: bold;"}}));
@@ -440,6 +486,54 @@ lces.rc[3] = function() {
     "center": {
       node: function(params, context) {
         return new lcWidget(jSh.c("span", {attributes: {style: "display: block;text-align: center;"}}));
+      },
+      update: function() {
+        
+      }
+    },
+    "h1": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("h1"));
+      },
+      update: function() {
+        
+      }
+    },
+    "h2": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("h2"));
+      },
+      update: function() {
+        
+      }
+    },
+    "h3": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("h3"));
+      },
+      update: function() {
+        
+      }
+    },
+    "h4": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("h4"));
+      },
+      update: function() {
+        
+      }
+    },
+    "h5": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("h5"));
+      },
+      update: function() {
+        
+      }
+    },
+    "h6": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("h6"));
       },
       update: function() {
         
