@@ -330,12 +330,12 @@ lces.rc[7] = function() {
     lcWindow.call(this);
     var that = this;
     
-    
     // Add dynText
     this.dynTextTrigger = "text"; // When the text state changes DynText will recompile
     lcDynamicText.call(this);
     
     // Update on dynText property change
+    var updateHeightOnVisible = false;
     this.on("dynpropchange", function() {
       if (that._updateNotifiHeight)
         that._updateNotifiHeight();
@@ -470,6 +470,7 @@ lces.rc[7] = function() {
       var container = that.container;
       var lcesUI = lces.ui;
       
+      // Set visible
       if (visible) {
         container.removeAttribute("window-invisible");
         
@@ -488,6 +489,12 @@ lces.rc[7] = function() {
         that._visibleAnim = setTimeout(function() {
           container.setAttribute("visible", "");
           container.getChild(0).style.height = that.renderedHeight;
+          
+          if (updateHeightOnVisible) {
+            that._updateNotifiHeight();
+            
+            updateHeightOnVisible = false;
+          }
         }, 0);
         
         // Closing countdown
@@ -497,7 +504,9 @@ lces.rc[7] = function() {
           }, that.delay);
         }
         
-      } else {
+      }
+      // set invisible/remove notification
+      else {
         // Fade out animation
         container.removeAttribute("visible");
         
@@ -525,6 +534,14 @@ lces.rc[7] = function() {
       this.visible = !this.visible;
     }
     
+    // Addbutton method wrapper
+    this.__addButton = this.addButton;
+    this.addButton = function() {
+      this.buttonPanelVisible = true;
+      
+      this.__addButton.apply(this, arguments);
+    }
+    
     // Add to notifi group manager
     lces.ui.notifications.addMember(this);
     
@@ -533,6 +550,12 @@ lces.rc[7] = function() {
     
     // Get height for expanding/collapsing animations
     this._updateNotifiHeight = function() {
+      if (!that.visible) {
+        updateHeightOnVisible = true;
+        
+        return;
+      }
+      
       if (this.container.parentNode)
         this._ph.substitute(this.container);
       
