@@ -34,7 +34,132 @@ lces.rc[2] = function() {
   // For faster reference
   var Object = lces.global.Object || window.Object;
   
-  lces.global.lcComponentMethods = {
+  // AUCP LCES Constructors
+  lces.global.lcComponent = lcComponent;
+  
+  function lcComponent() {
+    // This should be the fundamental building block
+    // of the AUCP component linked event system. I can't
+    // come up with something better to call it so just
+    // AUCP Linked Component Event System I guess.
+    // I like thinking up weird names, LCES is pronounced "Elsis" btw...
+
+    if (this.type)
+      return true;
+
+    this.type = "LCES Component";
+    this.isLCESComponent = true;
+
+    // Use this to distinguish between instanced LCES components
+    this.LCESID = LCES.components.length;
+    
+    // If noReference is on then it just appends null
+    LCES.components.push(lces.noReference ? null : this);
+
+    this.states = {};
+
+    this.dataLinks = [];
+
+    this.extensionData = []; // Data for extensions
+
+    var that = this;
+
+    // Check if needs to add methods manually
+    if (!(this instanceof lcComponent)) {
+      jSh.extendObj(this, lcComponent.prototype);
+      console.log("LCES ISN'T INSTACED WTF", this);
+    }
+
+    // Add our LCESName for easy access via global lces() function
+    this.setState("LCESName", "");
+    this.addStateListener("LCESName", function(LCESName) {
+      if (LCESName)
+        LCES.components[LCESName] = that;
+    });
+    this.addStateCondition("LCESName", function(LCESName) {
+      if (this.get()) {
+        if (this.get() === LCESName)
+          return false;
+        
+        LCES.components[this.get()] = undefined;
+      }
+
+      return true;
+    });
+
+    // Now setup some important things beforehand...
+
+    this.setState("statechange", "statechange");
+    this.setState("newstate", "newstate");
+    
+    // Statechange state specifics
+    this.states["statechange"].states = {};
+
+    this._setState = this.setState;
+    this.setState  = lcComponentSetState;
+    
+    this.groups = [];
+    
+    // Add the event array
+    this.events = [];
+    
+    return false; // Not being extended or anything, a new component.
+  }
+  
+  jSh.extendObj(lcComponent.prototype, {
+    __lcComponent__: 1
+  });
+  
+  lcComponent.prototype.constructor = lcComponent;
+  
+  // lcComponent custom setState method
+  function lcComponentSetState(state, stateStatus, recurring) {
+    var states    = this.states;
+    var _setState = this._setState.bind(this);
+    var stateObj  = states[state];
+    
+    var statechange = states.statechange;
+    
+    if (!recurring && stateObj && stateObj.stateStatus === stateStatus) {
+      _setState(state, stateStatus, recurring, true);
+      return false;
+    }
+      
+    var newstate = false;
+    if (!stateObj)
+      newstate = true;
+
+    if (!stateObj || !stateObj.flippedStateCall) {
+      _setState(state, stateStatus, recurring);
+      
+      var stateObj  = states[state];
+      
+      if (stateObj.oldStateStatus !== stateObj.stateStatus) {
+        if (!statechange.states[state])
+          statechange.states[state] = {};
+        
+        statechange.states[state].recurring = recurring;
+        
+        _setState("statechange", state, true);
+      }
+    } else {
+      if (stateObj.oldStateStatus !== stateObj.stateStatus) {
+        if (!statechange.states[state])
+          statechange.states[state] = {};
+        
+        statechange.states[state].recurring = recurring;
+        
+        _setState("statechange", state, true);
+      }
+      
+      _setState(state, stateStatus, recurring);
+    }
+
+    if (newstate)
+      _setState("newstate", state, true);
+  }
+  
+  jSh.extendObj(lcComponent.prototype, {
     setState: function(state, stateStatus, recurring, recurred) {
       if (!this.states[state]) {
         // Since we don't have it, we'll make it.
@@ -395,176 +520,9 @@ lces.rc[2] = function() {
       if (index !== -1)
         evtObj.listeners.splice(index, 1);
     }
-  }
+  });
   
-  // lcComponent custom setState method
-  function lcComponentSetState(state, stateStatus, recurring) {
-    var states    = this.states;
-    var _setState = this._setState.bind(this);
-    var stateObj  = states[state];
-    
-    var statechange = states.statechange;
-    
-    if (!recurring && stateObj && stateObj.stateStatus === stateStatus) {
-      _setState(state, stateStatus, recurring, true);
-      return false;
-    }
-      
-    var newstate = false;
-    if (!stateObj)
-      newstate = true;
-
-    if (!stateObj || !stateObj.flippedStateCall) {
-      _setState(state, stateStatus, recurring);
-      
-      var stateObj  = states[state];
-      
-      if (stateObj.oldStateStatus !== stateObj.stateStatus) {
-        if (!statechange.states[state])
-          statechange.states[state] = {};
-        
-        statechange.states[state].recurring = recurring;
-        
-        _setState("statechange", state, true);
-      }
-    } else {
-      if (stateObj.oldStateStatus !== stateObj.stateStatus) {
-        if (!statechange.states[state])
-          statechange.states[state] = {};
-        
-        statechange.states[state].recurring = recurring;
-        
-        _setState("statechange", state, true);
-      }
-      
-      _setState(state, stateStatus, recurring);
-    }
-
-    if (newstate)
-      _setState("newstate", state, true);
-  }
-  
-  // AUCP LCES Constructors
-
-  lces.global.lcComponent = function() {
-    // This should be the fundamental building block
-    // of the AUCP component linked event system. I can't
-    // come up with something better to call it so just
-    // AUCP Linked Component Event System I guess.
-    // I like thinking up weird names, LCES is pronounced "Elsis" btw...
-
-    if (this.type)
-      return true;
-
-    this.type = "LCES Component";
-    this.isLCESComponent = true;
-
-    // Use this to distinguish between instanced LCES components
-    this.LCESID = LCES.components.length;
-    
-    // If noReference is on then it just appends null
-    LCES.components.push(lces.noReference ? null : this);
-
-    this.states = {};
-
-    this.dataLinks = [];
-
-    this.extensionData = []; // Data for extensions
-
-    var that = this;
-
-    // Add our important methods...
-    jSh.extendObj(this, lcComponentMethods);
-
-    // Add our LCESName for easy access via global lces() function
-
-    this.setState("LCESName", "");
-    this.addStateListener("LCESName", function(LCESName) {
-      if (LCESName)
-        LCES.components[LCESName] = that;
-    });
-    this.addStateCondition("LCESName", function(LCESName) {
-      if (this.get()) {
-        if (this.get() === LCESName)
-          return false;
-        
-        LCES.components[this.get()] = undefined;
-      }
-
-      return true;
-    });
-
-    // Now setup some important things beforehand...
-
-    this.setState("statechange", "statechange");
-    this.setState("newstate", "newstate");
-    
-    // Statechange state specifics
-    this.states["statechange"].states = {};
-
-    this._setState = this.setState;
-    this.setState  = lcComponentSetState;
-    
-    this.groups = [];
-    
-    // Add the event array
-    this.events = [];
-    
-    return false; // Not being extended or anything, a new component.
-  }
-
-  var lcGroupMethods = {
-    addMember: function(component) {
-      var that = this;
-      var args = arguments;
-      
-      if (jSh.type(component) == "array")
-        return component.forEach(function(i) {args.callee.call(that, i);});
-
-      if (jSh.toArr(arguments).length > 1)
-        return jSh.toArr(arguments).forEach(function(i) {args.callee.call(that, i);});
-
-
-      this.members.push(component);
-      component.groups.push(this);
-      component.addStateListener("statechange", this.memberMethod);
-      
-      this.setState("newmember", component, true); // I might not need that dangerous recurring, we'll see.
-    },
-
-    removeMember: function(component) {
-      component.groups.splice(component.groups.indexOf(this), 1);
-      this.members.splice(this.members.indexOf(component), 1);
-      
-      component.removeStateListener("statechange", this.memberMethod);
-    },
-    
-    
-    addExclusiveListener: function(state, listener) {
-      if (!this.states[state])
-        throw ReferenceError("No such state");
-      if (jSh.type(listener) !== "function")
-        throw TypeError("Listener " + listener + " is not of type 'function'");
-      
-      this.states[state].exclusiveFunctions.push(listener);
-    },
-    
-    removeExclusiveListener: function(state, listener) {
-      if (!this.states[state])
-        throw ReferenceError("No such state");
-      
-      if (this.states[state].exclusiveFunctions.indexOf(listener) !== -1)
-        this.states[state].splice(this.states[state].exclusiveFunctions.indexOf(listener), 1);
-    }
-  }
-
-  lcComponent.prototype = {
-    __lcComponent__: 1
-  }
-  lcComponent.prototype.constructor = lcComponent;
-
-
-  lces.global.lcGroup = function() {
+  function lcGroup() {
     var extended = lcComponent.call(this);
     if (!extended)
       this.type = "LCES Group";
@@ -576,9 +534,11 @@ lces.rc[2] = function() {
     
     var thatStates = that.states;
     
-    // Add our main stuffs.
-    jSh.extendObj(this, lcGroupMethods);
-    
+    // Check if not instaced
+    if (!(this instanceof lcGroup)) {
+      jSh.extendObj(this, lcGroup.prototype);
+      console.log("LCES LCGROUP PHONY BASTARD - ", this);
+    }
     // Update members after a trigger
     var updatingGroupState = false;
     
@@ -589,7 +549,7 @@ lces.rc[2] = function() {
       for (var i=0,l=members.length; i<l; i++) {
         var member = members[i];
         
-        if (member.states[state] && !member.states[state].private && member.states[state].stateStatus !== value || recurring){
+        if (member.states[state] && !member.states[state].private && member.states[state].stateStatus !== value || recurring) {
           if (!that.exclusiveMembers[state]) {
             member._setState(state, value, recurring);
             member._setState("statechange", state, true);
@@ -686,15 +646,58 @@ lces.rc[2] = function() {
       return this.exclusiveMembers[state].indexOf(member) !== -1;
     }
   }
-
+  
   jSh.inherit(lcGroup, lcComponent);
+  
+  jSh.extendObj(lcGroup.prototype, {
+    addMember: function(component) {
+      var that = this;
+      var args = arguments;
+      
+      if (jSh.type(component) == "array")
+        return component.forEach(function(i) {args.callee.call(that, i);});
 
-  // lcGroup.prototype = new lcComponent(); // This won't do I think, I'll just stick with the .call() method.
+      if (jSh.toArr(arguments).length > 1)
+        return jSh.toArr(arguments).forEach(function(i) {args.callee.call(that, i);});
 
 
+      this.members.push(component);
+      component.groups.push(this);
+      component.addStateListener("statechange", this.memberMethod);
+      
+      this.setState("newmember", component, true); // I might not need that dangerous recurring, we'll see.
+    },
 
+    removeMember: function(component) {
+      component.groups.splice(component.groups.indexOf(this), 1);
+      this.members.splice(this.members.indexOf(component), 1);
+      
+      component.removeStateListener("statechange", this.memberMethod);
+    },
+    
+    
+    addExclusiveListener: function(state, listener) {
+      if (!this.states[state])
+        throw ReferenceError("No such state");
+      if (jSh.type(listener) !== "function")
+        throw TypeError("Listener " + listener + " is not of type 'function'");
+      
+      this.states[state].exclusiveFunctions.push(listener);
+    },
+    
+    removeExclusiveListener: function(state, listener) {
+      if (!this.states[state])
+        throw ReferenceError("No such state");
+      
+      if (this.states[state].exclusiveFunctions.indexOf(listener) !== -1)
+        this.states[state].splice(this.states[state].exclusiveFunctions.indexOf(listener), 1);
+    }
+  });
+  
+  lces.global.lcGroup = lcGroup;
+  
   // LCES Server Related Components
-
+  
   lces.global.lcData = function() { // This should be for stuff that is shared with the server's DB
     var extended = lcComponent.call(this);
     if (!extended)

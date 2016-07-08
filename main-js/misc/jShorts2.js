@@ -46,6 +46,7 @@ lces.rc[0] = function() {
             if (!elm.jSh) {
               elm.getParent = jSh.getParent;
               elm.getChild  = jSh.getChild;
+              elm.css       = jSh.setCSS;
               elm.on        = jSh.onEvent;
               elm.jSh       = jSh;
               
@@ -60,6 +61,7 @@ lces.rc[0] = function() {
         } else if (!result.jSh) {
           result.getParent = jSh.getParent;
           result.getChild  = jSh.getChild;
+          result.css       = jSh.setCSS;
           result.on        = jSh.onEvent;
           result.jSh       = jSh;
           
@@ -80,7 +82,7 @@ lces.rc[0] = function() {
       var e = jSh.determineType(src);
       
       if (!e)
-        return false;
+        return src;
       
       if (first)
         new lcWidget(e);
@@ -158,7 +160,7 @@ lces.rc[0] = function() {
   }
   
   // Similar to extendObj, but will go into deeper objects if they exist and merging the differences
-  jSh.mergeObj = function(obj, extension, dontReplaceObjects, dontReplaceValues) {
+  jSh.mergeObj = function(obj, extension, dontReplaceObjects, dontReplaceValues, dontReplaceArrays) {
     function merge(curObj, curExt) {
       Object.getOwnPropertyNames(curExt).forEach(function(i) {
         var curProp    = curObj[i];
@@ -166,6 +168,8 @@ lces.rc[0] = function() {
         
         if (jSh.type(curProp) === "object" && jSh.type(curExtProp) === "object")
           merge(curProp, curExtProp);
+        else if (dontReplaceArrays && jSh.type(curProp) === "array" && jSh.type(curExtProp) === "array")
+          curProp.push.apply(curExtProp);
         else if (dontReplaceValues && curProp === undf)
           curObj[i] = curExtProp;
         else if (!dontReplaceObjects || jSh.type(curProp) !== "object" && (!dontReplaceValues || curProp === undf))
@@ -445,16 +449,17 @@ lces.rc[0] = function() {
       }
     }
     
+    check = check.reverse();
     if (off < 0)
       off = check.length + off;
     
-    if (!children[off])
+    if (!check[off])
       return null;
     
     if (typeof length === "number" && length > 1)
-      return children.slice(off, off + length);
+      return check.slice(off, off + length);
     else
-      return children[off];
+      return check[off];
   }
   
   jSh.getParent = function(jump) {
@@ -504,6 +509,7 @@ lces.rc[0] = function() {
       e.getParent = jSh.getParent;
       e.getChild  = jSh.getChild;
       e.on        = jSh.onEvent;
+      e.css       = jSh.setCSS;
       e.jSh       = jSh;
       
       // Improve append and removechild methods
@@ -515,6 +521,21 @@ lces.rc[0] = function() {
     }
     
     return e;
+  }
+  
+  jSh.setCSS = function(css) {
+    if (!css || jSh.type(css) !== "object")
+      return this;
+    
+    var props = Object.getOwnPropertyNames(css);
+    var style = this.style;
+    
+    for (var i=0,l=props.length; i<l; i++) {
+      var propName = props[i];
+      style[propName] = css[propName];
+    }
+    
+    return this;
   }
   
   jSh.elementExt = {
@@ -546,30 +567,29 @@ lces.rc[0] = function() {
   }
 
   jSh.id = function(id, parent) { // Compatible with MockupElement and normal # selection
-    return (jSh.MockupElement && parent instanceof jSh.MockupElement ? parent : document).getElementById(id);
+    return (jSh.MockupElement && parent instanceof jSh.MockupElement ? parent : (parent ? (parent.ownerDocument || parent) : document)).getElementById(id);
   }
-
+  
   jSh.class = function(c, parent) {
     return jSh.toArr(parent.getElementsByClassName(c));
   }
-
+  
   jSh.tag = function(tag, parent) {
     return jSh.toArr(parent.getElementsByTagName(tag));
   }
-
+  
   jSh.name = function(name) {
     return jSh.toArr(document.getElementsByName(name));
   }
-
+  
   jSh.placeholder = function(ph, parent) {
     return jSh.oneOrArr(jSh.toArr(parent.getElementsByTagName("lces-placeholder")).filter(function(i) {return i.phName && i.phName.toLowerCase() === ph.toLowerCase();}));
   }
-
+  
   jSh.queryAll = function(query, parent, first) {
     return jSh.toArr(parent[first ? "querySelector" : "querySelectorAll"](query));
   }
-
-
+  
   // Determine selector in the string
   jSh.isID    = /^#[^\s()\[\]*:{}]+$/i;
   jSh.isClass = /^\.[^\s()\[\]*:{}]+$/i;

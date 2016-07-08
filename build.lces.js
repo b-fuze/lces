@@ -1,4 +1,4 @@
-#! /usr/local/bin/node
+#! /usr/bin/env node
 
 // LCES Builder - Based off of AUR's builder
 

@@ -491,6 +491,34 @@ lces.rc[3] = function() {
         
       }
     },
+    "break": {
+      node() {
+        return lces.new("widget", jSh.c("p"));
+      },
+      update() {
+        
+      }
+    },
+    "opacity": {
+      node(params, context) {
+        return lces.new("widget", jSh.c("span", {attributes: {style: "opacity: " + params + ";"}}));
+      },
+      update(s) {
+        this.component.style = {
+          opacity: s
+        };
+      }
+    },
+    "quote": {
+      node(params, context) {
+        return lces.new("widget", jSh.d(".lces-text-quote"));
+      },
+      update(s) {
+        this.component.style = {
+          opacity: s
+        };
+      }
+    },
     "h1": {
       node: function(params, context) {
         return new lcWidget(jSh.c("h1"));
