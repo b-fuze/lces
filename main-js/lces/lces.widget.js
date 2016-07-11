@@ -2,11 +2,11 @@
 lces._WidgetInit = function() {
   
   // TODO: Wrap these for possible conflicts
-  window.ih = function(s) {
+  lces.global.ih = function(s) {
     return {s: s, t: 1}  // Returns 1 for innerHTML
   };
 
-  window.prefixEvent = function(event, element, callback) {
+  lces.global.prefixEvent = function(event, element, callback) {
     if (jSh.type(event) != "array")
       event = [event];
     
@@ -19,7 +19,7 @@ lces._WidgetInit = function() {
     
   }
 
-  window.onTransitionEnd = function(element, callback) {
+  lces.global.onTransitionEnd = function(element, callback) {
     if (!(element instanceof Node))
       element = element.element;
     
@@ -27,7 +27,7 @@ lces._WidgetInit = function() {
   }
   
   // lcFocus: A quick library for managing the focused native DOM and custom LCES elements
-  window.lcFocus = function() {
+  lces.global.lcFocus = function() {
     var that  = this;
     this.type = "LCES Focus Manager";
     
@@ -97,7 +97,7 @@ lces._WidgetInit = function() {
 
   // Helpful functions
 
-  window.LCESLoopLabels = function() {
+  lces.global.LCESLoopLabels = function() {
     var labels = jSh("label");
     var activeLabels = jSh.toArr(labels).filter(function(i) {return !!i.htmlFor;});
     activeLabels.forEach(function(i, un, arr) {arr[i.htmlFor] = i;});
@@ -106,7 +106,7 @@ lces._WidgetInit = function() {
   }
 
   // lcWidget([HTML DOM Element) I have no idea what I'm doing...
-  window.lcWidget = function(e) {
+  lces.global.lcWidget = function(e) {
     var extended = lcComponent.call(this);
     if (!extended)
       this.type = "LCES Widget";
@@ -115,6 +115,7 @@ lces._WidgetInit = function() {
     
     // Get jSh
     this.jSh = jSh;
+    this.getChild = jSh.getChild;
     
     // Get some things from prototype
     this._determineType = this._determineType;
@@ -181,38 +182,47 @@ lces._WidgetInit = function() {
     
     this.setState("children", jSh.toArr(this.element.childNodes));
     this.addStateListener("children", function(child) {
-      if (jSh.type(child) === "array") {
-        child.forEach(function(i) {
-          that.appendChild(i);
-        });
-        return true;
-      }
-      
       that.appendChild(child);
     });
     this.states["children"].get = function() {return jSh.toArr(that.element.childNodes)};
-    
+    this.hardLinkStates("childNodes", "children");
     
     // Methods
-    
     this.appendChild = function(child) {
-      if (jSh.hasMultipleArgs(arguments, this))
-        return;
+      if (!this.element.jSh)
+        jSh.shorten(this.element);
       
-      if (child.isLCESComponent)
-        child = child.element;
-        
-      this.element.appendChild(child);
+      var children = jSh.toArr(arguments);
+      
+      if (jSh.type(children[0]) === "array")
+        children = children[0];
+      
+      for (var i=0,l=children.length; i<l; i++) {
+        var child = this._determineType(children[i]);
+        this.element.__apch(child);
+      }
     }
     
     this.append = this.appendChild;
     
     this.removeChild = function(child) {
-      if (jSh.hasMultipleArgs(arguments, this))
-        return;
+      if (!this.element.jSh)
+        jSh.shorten(this.element);
       
-      var DOMElement = this._determineType(child);
-      this.element.removeChild(DOMElement);
+      var children = jSh.toArr(arguments);
+      
+      if (jSh.type(children[0]) === "array")
+        children = children[0];
+      
+      for (var i=0,l=children.length; i<l; i++) {
+        var child = this._determineType(children[i]);
+        this.element.__rmch(child);
+      }
+      
+      if (children.length === 1)
+        return children[0];
+      else
+        return children;
     }
     
     this.remove = this.removeChild;
@@ -424,6 +434,10 @@ lces._WidgetInit = function() {
       } else {
         type = "widget";
       }
+      
+      // Check if constructor exists and inherits from lcWidget
+      if (typeof lces.types[type] !== "function" || !(lces.types[type].prototype instanceof lces.type("widget")))
+        type = "widget";
 
       // Make our new widget
       var newWidget = new lces.types[type](jSh(widget));
@@ -481,3 +495,6 @@ lces._WidgetInit = function() {
     "widget": lcWidget
   });
 }
+
+// Solo
+lces.rc[3] = lces._WidgetInit;

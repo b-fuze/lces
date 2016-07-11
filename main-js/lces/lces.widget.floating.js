@@ -16,8 +16,8 @@ lces.rc[7] = function() {
     this.borderOffset = 20;
     
     // Check for the main window container grouping element
-    if (!jSh("#windowcontainer"))
-      document.body.appendChild(jSh.d({sel: "#windowcontainer.lces-themify", attr: {style: "text-align: left;"}}));
+    // if (!jSh("#windowcontainer"))
+    //
     
     // Get or create the window element
     if (!e) {
@@ -34,8 +34,8 @@ lces.rc[7] = function() {
       // Create the window from a reference
       e = jSh(e);
       
-      var className     = e.getAttribute("class");
-      var windowHTMLId  = e.getAttribute("id");
+      var className    = e.getAttribute("class");
+      var windowHTMLId = e.getAttribute("id");
       
       var lcesTitle   = e.jSh("lces-title")[0];
       var lcesContent = e.jSh("lces-contents")[0];
@@ -80,12 +80,16 @@ lces.rc[7] = function() {
     this._title = this.container.getElementsByClassName("lces-window-title")[0];
     this._buttonpanel = this.container.getElementsByClassName("lces-window-buttonpanel")[0];
     
+    // Wrapping divs
+    var wrap1 = this.container.getChild(0);
+    var wrap2 = wrap1.getChild(0);
     
     // LCES Window Component Properties
     this.setState("title", name || "Window " + this.windowID);
     this.addStateListener("title", function(title) {
       that._title.innerHTML = title;
     });
+    
     this.setState("titleVisible", true);
     this.addStateListener("titleVisible", function(visible) {
       that._title.style.display = visible ? "block" : "none";
@@ -131,12 +135,13 @@ lces.rc[7] = function() {
       this._buttonpanel.removeChild(button.element);
     }
     
-    
-    
     // Add draggable functionality with the title as the anchor and the container as the target
-    lcDraggable.call(this, this.container.getChild(0).getChild(0).getChild(0), this.container);
-    
-    
+    lcDraggable.call(
+      this,
+      this.container.getChild(0).getChild(0).getChild(0),
+      this.container,
+      true // True to enable optimizations for lcWindow
+    );
     
     // Window fade in effect
     // onTransitionEnd(this.container, function(e) {
@@ -182,12 +187,16 @@ lces.rc[7] = function() {
     }
     
     this._center = function() {
-      this.container.style.left = ((innerWidth - this.container.offsetWidth) / 2) + "px";
-      
       var top = ((innerHeight - this.container.offsetHeight) / 2);
       top = top < this.borderOffset ? this.borderOffset : top;
+      var left = ((innerWidth - this.container.offsetWidth) / 2);
       
-      this.container.style.top = top + "px";
+      // Center with GPU
+      this.container.style.transform = `translate3d(${left}px, ${top}px, 0px)`;
+      
+      // The old way of centering:
+      // this.container.style.left = ((innerWidth - this.container.offsetWidth) / 2) + "px";
+      // this.container.style.top = top + "px";
     }
     
     this.setState("centered", false);
@@ -201,20 +210,34 @@ lces.rc[7] = function() {
     
     this.setState("width", 1);
     this.addStateListener("width", function(width) {
+      var suffix = typeof width === "string" ? width.substr(-1) : null;
       width = !width ? width : parseInt(width);
+      
+      if (suffix !== "%")
+        suffix = null;
       
       if (!width || isNaN(width) || width < 0) {
         that.style.width = "auto";
         this.stateStatus = "auto";
       } else {
-        that.style.width = width + "px";
+        that.style.width = suffix ? "100%" : width + "px";
+        
+        var contWidth = suffix ? width + suffix : "auto";
+        that.container.style.width = contWidth;
+        wrap1.style.width = contWidth;
+        wrap2.style.width = contWidth;
+        
         this.stateStatus = width;
       }
     });
     
     this.setState("height", 1);
     this.addStateListener("height", function(height) {
+      var suffix = typeof height === "string" ? height.substr(-1) : null;
       height = !height ? height : parseInt(height);
+      
+      if (suffix !== "%")
+        suffix = null;
       
       if (!height || isNaN(height) || height < 0) {
         that.style = {
@@ -224,8 +247,13 @@ lces.rc[7] = function() {
         
         this.stateStatus = "auto";
       } else {
-        that.style.height = height + "px";
+        that.style.height = suffix ? "100%" : height + "px";
         that.style.overflow = "auto";
+        
+        var contHeight = suffix ? height + suffix : "auto";
+        that.container.style.height = contHeight;
+        wrap1.style.height = contHeight;
+        wrap2.style.height = contHeight;
         
         this.stateStatus = height;
       }
@@ -307,12 +335,12 @@ lces.rc[7] = function() {
     lcWindow.call(this);
     var that = this;
     
-    
     // Add dynText
     this.dynTextTrigger = "text"; // When the text state changes DynText will recompile
     lcDynamicText.call(this);
     
     // Update on dynText property change
+    var updateHeightOnVisible = false;
     this.on("dynpropchange", function() {
       if (that._updateNotifiHeight)
         that._updateNotifiHeight();
@@ -447,6 +475,7 @@ lces.rc[7] = function() {
       var container = that.container;
       var lcesUI = lces.ui;
       
+      // Set visible
       if (visible) {
         container.removeAttribute("window-invisible");
         
@@ -465,6 +494,12 @@ lces.rc[7] = function() {
         that._visibleAnim = setTimeout(function() {
           container.setAttribute("visible", "");
           container.getChild(0).style.height = that.renderedHeight;
+          
+          if (updateHeightOnVisible) {
+            that._updateNotifiHeight();
+            
+            updateHeightOnVisible = false;
+          }
         }, 0);
         
         // Closing countdown
@@ -474,7 +509,9 @@ lces.rc[7] = function() {
           }, that.delay);
         }
         
-      } else {
+      }
+      // set invisible/remove notification
+      else {
         // Fade out animation
         container.removeAttribute("visible");
         
@@ -502,6 +539,14 @@ lces.rc[7] = function() {
       this.visible = !this.visible;
     }
     
+    // Addbutton method wrapper
+    this.__addButton = this.addButton;
+    this.addButton = function() {
+      this.buttonPanelVisible = true;
+      
+      this.__addButton.apply(this, arguments);
+    }
+    
     // Add to notifi group manager
     lces.ui.notifications.addMember(this);
     
@@ -510,6 +555,12 @@ lces.rc[7] = function() {
     
     // Get height for expanding/collapsing animations
     this._updateNotifiHeight = function() {
+      if (!that.visible) {
+        updateHeightOnVisible = true;
+        
+        return;
+      }
+      
       if (this.container.parentNode)
         this._ph.substitute(this.container);
       
@@ -664,6 +715,14 @@ lces.rc[7] = function() {
   lces.ui.initNotifications = function() {
     lces.ui.notifications = new lcNotifications();
   }
-
+  
+  lces.addInit(function() {
+    document.body.appendChild(jSh.d({
+      sel: "#windowcontainer.lces-themify",
+      attr: {
+        style: "text-align: left;"
+      }
+    }));
+  });
   lces.addInit(lces.ui.initNotifications);
 }

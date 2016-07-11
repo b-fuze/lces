@@ -15,10 +15,6 @@ lces.rc[5] = function() {
   // TODO: Consider the best method of implementing user-driven events
   // function lcWidget
 
-  // Aight, you know what man???
-  // I don't even care anymore, time for some sketchprogramming, I'm just gonna code some
-  // crap
-
   // Hmm, lcGroup.exclusiveState and lcFocus have solved my problem for now.
 
   // Some form elements
@@ -28,7 +24,6 @@ lces.rc[5] = function() {
     var that = this;
     
     this.type = "LCES TextField Widget";
-    
     
     if (this.element.type && (this.element.type === "text" || this.element.type === "password" || this.element.type === "hidden") || this.element.tagName.toLowerCase() == "textarea") {
       this.classList.add("lces");
@@ -95,10 +90,12 @@ lces.rc[5] = function() {
     
     var scrubbarWidth = scrubbar.offsetWidth;
     var scrubberWidth = scrubber.offsetWidth;
+    var widthCheck    = false;
     
     scrubbar.addEventListener("mousedown", function(e) {
       e.preventDefault();
       var target = e.target || e.srcElement;
+      console.log(e.clientX);
       
       // Focus scrubbar
       that.element.focus();
@@ -134,24 +131,26 @@ lces.rc[5] = function() {
       var newOff = e.x < 0 ? 0 : e.x;
       newOff = (newOff > maxOff ? maxOff : newOff);
       
-      // Update value
-      if (!e.valueTriggered) {
-        that.updatingValue = true;
+      if (!widthCheck) {
+        // Update value
+        if (!e.valueTriggered) {
+          that.updatingValue = true;
+          
+          var newValue = that.min + (that.max - that.min) * (newOff / (scrubbarWidth - scrubberWidth - 2));
+          that.value = !that.decimals ? Math.round(newValue) : newValue;
+        } else {
+          that.states["value"].oldStateStatus = that.value;
+          that.states["value"].stateStatus = that.min + (that.max - that.min) * (newOff / (scrubbarWidth - scrubberWidth - 2));
+        }
         
-        var newValue = that.min + (that.max - that.min) * (newOff / (scrubbarWidth - scrubberWidth - 2));
-        that.value = !that.decimals ? Math.round(newValue) : newValue;
-      } else {
-        that.states["value"].oldStateStatus = that.value;
-        that.states["value"].stateStatus = that.min + (that.max - that.min) * (newOff / (scrubbarWidth - scrubberWidth - 2));
+        that.displayValue = Math.round(that.value * 100) / 100;
+        
+        if (!that.decimals)
+          that.displayValue = Math.round(that.displayValue);
       }
       
-      that.displayValue = Math.round(that.value * 100) / 100;
-      
-      if (!that.decimals)
-        that.displayValue = Math.round(that.displayValue);
-      
       // Check if scrubber is the trigger
-      if (!e.scrubberTriggered)
+      if (!e.scrubberTriggered && !widthCheck)
         that.classList.add("animated");
       else
         that.classList.remove("animated");
@@ -179,6 +178,16 @@ lces.rc[5] = function() {
       else
         valueDisplay.style.display = "block";
     });
+    
+    this.updateSliderWidth = function() {
+      scrubbarWidth = scrubbar.offsetWidth;
+      scrubberWidth = scrubber.offsetWidth;
+    
+      // Force scrubber update
+      widthCheck = true;
+      that.triggerEvent("scrubberX", {valueTriggered: true, x: (scrubbarWidth - scrubberWidth) * ((this.value - that.min) / (that.max - that.min))});
+      widthCheck = false;
+    }
     
     this.min = 0;
     this.max = 100;
@@ -460,20 +469,20 @@ lces.rc[5] = function() {
     this.addEventListener("change", this.testInput);
     
     this.increment = function() {
-      var value = parseFloat(that.element.value) + 1
+      var value = {value: parseFloat(that.element.value) + 1};
       
-      var pass = that.testInput.call(that.element);
-      if (pass) this.value = value;
+      var pass = that.testInput.call(value);
+      if (pass) this.value = value.value;
       
       if (!lces.ui.mobileDevice)
         that.element.focus();
     }
     
     this.decrement = function() {
-      var value = parseFloat(that.element.value) - 1;
+      var value = {value: parseFloat(that.element.value) - 1};
       
-      var pass = that.testInput.call(that.element);
-      if (pass) this.value = value;
+      var pass = that.testInput.call(value);
+      if (pass) this.value = value.value;
       
       if (!lces.ui.mobileDevice)
         that.element.focus();
@@ -738,6 +747,7 @@ lces.rc[5] = function() {
       ]))
     ]));
     
+    this.type = "LCES Toggle Field";
     var that = this;
     var text = this.jSh(".lces-togglebox-text")[0];
     var main = this.element;
@@ -805,50 +815,156 @@ lces.rc[5] = function() {
   
   jSh.inherit(lcToggleField, lcCheckBox);
   
+  // -------------
+  // LCES Dropdown
+  // -------------
+  
+  var uiddown = new lcComponent();
+  lces.ui.dropdown = jSh.extendObj(uiddown, {
+    // options: {}, TODO: Check if required
+    optionCount: 0,
+    
+    display: null,
+    screen: new lcWidget(jSh.d(".lces-dropdown-screen.lces-themify")),
+    screenSet: false,
+    
+    cancelHide: function(e) {
+      e.preventDefault();
+      uiddown.screenVisible = false;
+    },
+    show: function(ddown) {
+      this.active = ddown;
+      
+      this.screenVisible = true;
+    },
+    hide: function() {
+      this.screenVisible = false;
+      
+      if (this.active.highlightedOption !== this.active.selectedOption)
+        this.active.selectedOption = this.active.highlightedOption;
+    }
+  });
+  
+  uiddown.addStateListener("active", function(ddown) {
+    var screen = uiddown.screen;
+    
+    // Remove current options and append new ones
+    uiddown.display.removeAllOptions();
+    uiddown.display.options = ddown.options;
+    uiddown.display.optionsContainer.append(ddown.options.map(o => o[2]));
+    
+    uiddown.display.selectedDisplay.html = ddown.selectedDisplay.html;
+    uiddown.display.updateDropdownSize();
+    
+    uiddown.display.style.width = getComputedStyle(ddown.element)["width"];
+  });
+  
+  uiddown.addStateListener("screenVisible", function(visible) {
+    var ddown   = uiddown.active;
+    var display = uiddown.display;
+    var screen  = uiddown.screen;
+    
+    if (visible) {
+      screen.classList.add("visible");
+      
+      var cRect = ddown.element.getBoundingClientRect();
+      display.style = {
+        top: cRect.top + "px",
+        left: cRect.left + "px"
+      }
+      display.classList.add("visible");
+      display.checkFlipped();
+    } else {
+      display.classList.remove("visible");
+      
+      setTimeout(function() {
+        screen.classList.remove("visible");
+      }, 260);
+    }
+  });
+  
+  uiddown.screen.addEventListener("mouseover", function(e) {e.preventDefault()});
+  uiddown.screen.addEventListener("wheel", uiddown.cancelHide);
+  uiddown.screen.addEventListener("click", function(e) {
+    var target = e.target || e.srcElement;
+    
+    while (target !== this) {
+      var targetId = target.getAttribute("lces-dropdown-option-id");
+      
+      if (targetId) {
+        uiddown.active.selectOption(targetId);
+        uiddown.active.element.focus();
+        break;
+      }
+      
+      target = target.parentNode;
+    }
+    
+    uiddown.hide();
+  });
+  
+  // Create screen dummy dropdown
+  lces.addInit(function() {
+    uiddown.screen.parent = document.body;
+    uiddown.screenSet = true;
+    
+    uiddown.display = new lcDropDown(null, true);
+    uiddown.display.parent = uiddown.screen;
+  }, 2);
+  
   window.lcDropDownOption = function(value, content, dropdown) {
-    var that = this;
     lcWidget.call(this, jSh.d(".lcesoption"));
-
-    this.type = "LCES Option Widget";
-
+    
+    var that   = this;
+    this.type  = "LCES Option Widget";
     this.value = value;
+    this.opId  = uiddown.optionCount++;
+    
+    this.setAttr("lces-dropdown-option-id", this.opId);
     
     // Check content type
     if (jSh.type(content) === "array")
       this.append(content);
     else
       this.append(this._determineType(content));
-
+    
     this.setState("selected", false);
     this.addStateListener("selected", function(state) {
       if (state) {
-        that.element.setAttribute("lces-selected", "");
+        that.highlighted = true;
+        
+        // Unselect the previous option
+        var oldOption = dropdown.states["selectedOption"].oldStateStatus;
+        if (oldOption)
+          oldOption.selected = false;
       } else {
-        that.element.removeAttribute("lces-selected");
+        that.highlighted = false;
       }
     });
     
-    this.addEventListener("click", function() {
-      dropdown.selectedOption = that;
-      
-      dropdown.menuvisible = false;
+    this.setState("highlighted", false);
+    this.addStateListener("highlighted", function(state) {
+      if (state)
+        that.element.setAttribute("lces-selected", "");
+      else
+        that.element.removeAttribute("lces-selected");
     });
   }
   
   jSh.inherit(lcDropDownOption, lcWidget);
   
-  window.lcDropDown = function(e) {
-    var that = this;
+  window.lcDropDown = function(e, screenDummy) {
     lcTextField.call(this, jSh.d(".lcesdropdown", undf, [
       jSh.d(".lcesdropdown-arrow", undf, [
         jSh.svg(undf, 10, 5, [
           jSh.path(undf, "m0 0 10 0-5 5z", "fill: #fff;")
         ])
       ])
-    ]));
+    ], screenDummy ? undf : {tabindex: 0}));
 
+    var that = this;
     this.type = "LCES DropDown Widget";
-
+    
     this.options = [];
     this.setState("selectedOption", false);
     
@@ -858,9 +974,164 @@ lces.rc[5] = function() {
     
     // Create necessary elements
     this.selectedDisplay = new lcWidget(jSh.d("lcesselected"));
-    this.optionsContainer = new lcWidget(jSh.d("lcesoptions"));
     this.appendChild(this.selectedDisplay);
-    this.optionsContainer.parent = this;
+    
+    // Check if the designated screen dropdown
+    if (screenDummy) {
+      this.optionsContainer = new lcWidget(jSh.d("lcesoptions"));
+      this.appendChild(this.optionsContainer);
+      
+      // Events for displaying options
+      function onWindowScroll() {
+        checkFlipped();
+      }
+      
+      // Event for knowing if menu goes below the viewport
+      this.setState("flipped", false);
+      this.addStateListener("flipped", function(flipped) {
+        that.classList[flipped ? "add" : "remove"]("flipped");
+      });
+      
+      this.checkFlipped = function() {
+        var displayState = that.optionsContainer.style.display;
+        that.optionsContainer.style.display = "inline-block";
+        var height = that.optionsContainer.element.offsetHeight;
+        var bottom = innerHeight - that.element.getBoundingClientRect().bottom;
+        
+        that.optionsContainer.style.display = displayState;
+        if (height > bottom)
+          that.flipped = true;
+        else
+          that.flipped = false;
+      }
+      
+      this.setState("menuvisible", false);
+      this.addStateListener("menuvisible", function(state) {
+        if (state) {
+          checkFlipped();
+          window.addEventListener("scroll", onWindowScroll);
+          
+          that.optionsContainer.style.display = "inline-block";
+          that.classList.add("visible");
+        } else {
+          window.removeEventListener("scroll", onWindowScroll);
+          that.classList.remove("visible");
+        }
+      });
+    }
+    
+    // State listeners
+    this.setState("value", null);
+    this.addStateListener("value", function(value) {
+      value = value + "";
+      
+      var option = null;
+      that.options.forEach(function(i) {
+        if (i[0].substr(0, i[0].length - 2) === value)
+          option = i[2];
+      });
+      
+      that.selectedOption = option;
+      
+      if (e)
+        e.value = value;
+    });
+    
+    // Disable annoying default browser functionality
+    this.addEventListener("mousedown", function(e) {
+      e.preventDefault();
+      
+      if (!screenDummy) {
+        that.element.focus();
+        uiddown.show(that);
+      }
+    });
+    
+    // Normal dropdown
+    if (!screenDummy) {
+      that.addEventListener("keydown", function(e) {
+        var cancel = false;
+        
+        // Space/Enter Key - Open dropdown
+        if (e.keyCode === 32 || e.keyCode === 13) {
+          if (!uiddown.screenVisible)
+            uiddown.show(that);
+          else
+            uiddown.hide();
+          
+          cancel = true;
+          
+        // Tab Key - Close dropdown
+        } else if (e.keyCode === 9) {
+          uiddown.hide();
+          
+        // Up/Down Arrow Key - Highlight different options
+        } else if (e.keyCode === 38 || e.keyCode === 40) {
+          var hOption = that.highlightedOption;
+          var nextOption;
+          
+          if (e.keyCode === 38)
+            nextOption = that.options[hOption.opIndex - 1];
+          else
+            nextOption = that.options[hOption.opIndex + 1];
+          
+          if (nextOption)
+            that.highlightedOption = nextOption[2];
+          
+          cancel = true;
+          
+        // Esc key - Cancel arrowkey selection and close dropdown
+        } else if (e.keyCode === 27) {
+          that.highlightedOption = that.selectedOption;
+          uiddown.hide();
+          
+          cancel = true;
+        }
+        
+        if (cancel)
+          e.preventDefault();
+      });
+      
+      this.addStateListener("highlightedOption", function(option) {
+        if (this.oldStateStatus)
+          this.oldStateStatus.highlighted = false;
+        
+        option.highlighted = true;
+      });
+      
+      this.addStateListener("selectedOption", function(option) {
+        if (!option) {
+          that.selectedDisplay.html = "&nbsp;";
+          return false;
+        }
+        
+        that.selectedDisplay.html = option.html;
+        that.value = option.value;
+        option.selected = true;
+        
+        // Update highlightedOption if not already
+        that.highlightedOption = option;
+      });
+      
+      // When focused by lces.focus
+      this.removeAllStateListeners("focused");
+      this.addStateListener("focused", function(state) {
+        this.component.menuvisible = state;
+      });
+      
+      this.setState("menuvisible", false);
+      this.addStateListener("menuvisible", function(mvisible) {
+        if (mvisible) {
+          uiddown.show(this);
+        } else {
+          uiddown.hide();
+        }
+      });
+      
+      this.selectOption = function(id) {
+        this.selectedOption = this.options[id + "id"];
+      }
+    }
     
     // Update size when new options added/removed
     var longestOptionSize = 0;
@@ -879,7 +1150,7 @@ lces.rc[5] = function() {
       this.options.forEach(function(option) {
         that.selectedDisplay.html = option[1];
         
-        var newWidth = parseInt(getComputedStyle(that.selectedDisplay.element)["width"]);
+        var newWidth = parseInt(getComputedStyle(that.selectedDisplay.element)["width"]) + 5;
         if (newWidth > longestOptionSize)
           longestOptionSize = newWidth;
       });
@@ -892,116 +1163,6 @@ lces.rc[5] = function() {
       ph.replace(this);
     }
     
-    
-    // State listeners
-    this.setState("value", null);
-    this.addStateListener("value", function(value) {
-      value = value + "";
-      
-      var option = null;
-      that.options.forEach(function(i) {
-        if (i[0].substr(0, i[0].length - 2) === value)
-          option = i[2];
-      });
-
-      that.selectedOption = option;
-      
-      if (e)
-        e.value = value;
-    });
-
-    this.addStateListener("selectedOption", function(option) {
-      if (option === null) {
-        that.selectedDisplay.html = "&nbsp;";
-        return false;
-      }
-
-      that.selectedDisplay.html = option.html;
-      that.value = option.value;
-      option.selected = true;
-    });
-
-    this.addStateCondition("selectedOption", function(state, recurred) { // To deselect the current option before setting the other.
-      if (recurred)
-        return false;
-      
-      if (this.get()) this.get().selected = false;
-
-      return true;
-    });
-    
-    // Disable annoying default browser functionality
-    this.addEventListener("mousedown", function(e) {
-      e.preventDefault();
-    });
-    
-    this.addEventListener("click", function(e) {
-      var target = e.target || e.srcElement;
-
-      /*if (target.parentNode == that.optionsContainer.element) {
-        that.selectedOption = target.component;
-
-        that.menuvisible = false;
-      } else */if (target == that.selectedDisplay.element || target == that.element || jSh.isDescendant(target, that.selectedDisplay.element)) {
-        that.menuvisible = !that.menuvisible; // Toggle the visibility of the menu
-      }
-    });
-    
-    // When focused by lces.focus
-    this.removeAllStateListeners("focused");
-    this.addStateListener("focused", function(state) {
-      this.component.menuvisible = state;
-    });
-    
-    // For pretty fade animations
-    onTransitionEnd(that.optionsContainer, function(e) {
-      if (e.propertyName == "opacity") {
-        var opacity = getComputedStyle(this)["opacity"];
-        
-        if (opacity == 0)
-          that.optionsContainer.style.display = "none";
-      }
-    });
-    
-    // Events for displaying options
-    function onWindowScroll() {
-      checkFlipped();
-    }
-    
-    this.setState("menuvisible", false);
-    this.addStateListener("menuvisible", function(state) {
-      if (state) {
-        checkFlipped();
-        window.addEventListener("scroll", onWindowScroll);
-        
-        that.optionsContainer.style.display = "inline-block";
-        that.classList.add("visible");
-      } else {
-        window.removeEventListener("scroll", onWindowScroll);
-        that.classList.remove("visible");
-      }
-    });
-    
-    // Event for knowing if menu goes below the viewport
-    this.setState("flipped", false);
-    this.addStateListener("flipped", function(flipped) {
-      that.classList[flipped ? "add" : "remove"]("flipped");
-    });
-    
-    function checkFlipped() {
-      var displayState = that.optionsContainer.style.display;
-      that.optionsContainer.style.display = "inline-block";
-      var height = that.optionsContainer.element.offsetHeight;
-      var bottom = innerHeight - that.element.getBoundingClientRect().bottom;
-      
-      that.optionsContainer.style.display = displayState;
-      if (height > bottom)
-        that.flipped = true;
-      else
-        that.flipped = false;
-    }
-    
-    // ---------------------
     // LCES DROPDOWN METHODS
     // ---------------------
     
@@ -1011,26 +1172,31 @@ lces.rc[5] = function() {
       
       this.options.push([value + "op", newOption.html, newOption]);
       this.options[value + "op"] = newOption;
+      this.options[newOption.opId + "id"] = newOption;
       
-      newOption.parent = this.optionsContainer;
+      // Add option index
+      newOption.opIndex = this.options.length - 1;
       
-      this.updateDropdownSize();
+      if (this.options.length === 0)
+        this.selectedOption = newOption;
+      that.updateDropdownSize();
+      
       return newOption;
     }
     
     // Remove option
     this.removeOption = function(option) {
-      var index   = typeof option === "number" ? option : undf;
-      var value   = typeof option === "string" ? option : undf;
-      var element = index === undf && value === undf ? this._determineType(option) : undf;
+      var index   = typeof option === "number" ? option : null;
+      var value   = typeof option === "string" ? option : null;
+      var element = index === null && value === null ? this._determineType(option) : null;
       
       var removeOptions = [];
       
-      if (index !== undf) {
+      if (index !== null) {
         removeOptions.push([this.options[index], index]);
       } else {
         this.options.forEach(function(opt, i) {
-          if (value !== undf) {
+          if (value !== null) {
             if (value.toLowerCase() == opt[0])
               removeOptions.push([opt, i]);
           } else {
@@ -1043,27 +1209,34 @@ lces.rc[5] = function() {
       removeOptions.forEach(function(i) {
         if (i[0]) {
           that.options.splice(i[1], 1);
-          
-          that.optionsContainer.remove(i[0][2]);
+          that.options[i[0].value + "op"] = undf;
+          that.options[i[0].opId + "id"] = undf;
           
           if (that.selectedOption === i[0][2])
             that.selectedOption = that.options[0][2];
         }
       });
       
-      this.updateDropdownSize();
+      // Update option option indexes
+      for (var i=0,l=this.options.length; i<l; i++) {
+        this.options[i][2].opIndex = i;
+      }
+      
+      that.updateDropdownSize();
     }
     
     this.removeAllOptions = function() {
       that.options = [];
-      that.optionsContainer.remove(that.optionsContainer.children);
+      that.value   = null;
       
-      that.value = null;
+      if (screenDummy)
+        that.optionsContainer.remove(that.optionsContainer.children);
+      else
+        that.updateDropdownSize();
     }
     
     // Check for refElement and options
     if (e) {
-      
       if (e.parentNode)
         e.parentNode.insertBefore(this.element, this.selectElement);
       
@@ -1106,10 +1279,13 @@ lces.rc[5] = function() {
     this.value = undefined;
     this.value = selectedOption ? selectedOption.value : "";
   }
-
+  
   jSh.inherit(lcDropDown, lcTextField);
-
-
+  
+  // -----------------
+  // LCES Table Widget
+  // -----------------
+  
   window.lcTHead = function() {
     lcWidget.call(this, jSh.c("thead"));
   }
@@ -1267,9 +1443,10 @@ lces.rc[5] = function() {
     this.removeAllRows = function() {
       this.rows = [];
       
-      while(this.tbody.getChild(0)) {
-        this.tbody.removeChild(this.tbody.getChild(0));
-      }
+      if (this.tbody)
+        while(this.tbody.getChild(0)) {
+          this.tbody.removeChild(this.tbody.getChild(0));
+        }
     }
     
     
@@ -1490,6 +1667,7 @@ lces.rc[5] = function() {
     "slider": lcSlider,
     "numberfield": lcNumberField,
     "fileinput": lcFileInput,
+    "table": lcTable,
     
     "accordion": lcAccordion
   });

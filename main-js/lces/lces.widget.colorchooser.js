@@ -58,35 +58,79 @@ lces.rc[6] = function() {
     
     return [rgb[0] + m, rgb[1] + m, rgb[2] + m];
   }
-
-  // Color chooser template
-
-  lces.ui.colorChooserTemplate = lces.template({render: jSh.dm(".lces-colorchooser.visible", undf, [
-    jSh.dm(".lces-cc-display", undf, [
-      jSh.dm(".lces-cc-color")
-    ]),
-    jSh.dm(".lces-colorchooser-modal", undf, [
-      // Colorwheel and cursor
-      jSh.dm(".lces-cc-section", undf, [
-        jSh.dm(".lces-cc-wheel", undf, [
-          jSh.dm(".lces-cc-wheel-value"),
-          jSh.dm(".lces-cc-cursor")
-        ])
-      ]),
-      // Sat and value Controls
-      jSh.dm(".lces-cc-section.lces-cc-controls", undf, [
-        jSh.dm(".lces-cc-row.lces-cc-saturation", undf, [
-          jSh.dm(".lces-cc-label", "S"),
-          lcSlider({min: 0, max: 100, hideValue: true})
+  
+  var validHex = /[\da-f]+/i;
+  function sanitizeHex(hex, fail) {
+    hex = (hex + "").match(validHex)[0];
+    
+    // Return white if invalid
+    if (!hex || hex.length < 3)
+      return !fail ? [255, 255, 255] : null;
+    
+    if (hex.length < 6)
+      hex = hex.split("")
+               .slice(0, 3)
+               .reduce((a, b, i) => a + (i === 1 ? a : "") + b + b);
+    
+    return [0, 0, 0].map((z, i) => parseInt(hex.substr(i * 2, 2), 16));
+  }
+  
+  lces.ui.sanitizeHex = sanitizeHex;
+  
+  function toHex(arr) {
+    return arr.map(n => n.toString(16)).map(s => s.length === 1 ? "0" + s : s).join("");
+  }
+  
+  lces.ui.colorchooser = {
+    // Color chooser template
+    template: lces.template({render: jSh.dm(".lces-colorchooser.visible", undf, [
+      jSh.dm(".lces-cc-display", undf, [
+        jSh.dm(".lces-cc-color")
+      ], {tabindex: 0}),
+      jSh.dm(".lces-colorchooser-modal", undf, [
+        // Colorwheel and cursor
+        jSh.dm(".lces-cc-section", undf, [
+          jSh.dm(".lces-cc-wheel", undf, [
+            jSh.dm(".lces-cc-wheel-value"),
+            jSh.dm(".lces-cc-cursor")
+          ])
         ]),
-        jSh.dm(".lces-cc-row.lces-cc-value", undf, [
-          jSh.dm(".lces-cc-label", "V"),
-          lcSlider({min: 0, max: 100, hideValue: true})
+        // Sat and value Controls
+        jSh.dm(".lces-cc-section.lces-cc-controls", undf, [
+          jSh.dm(".lces-cc-row.lces-cc-saturation", undf, [
+            jSh.dm(".lces-cc-label", "S"),
+            lcSlider({min: 0, max: 100, hideValue: true})
+          ]),
+          jSh.dm(".lces-cc-row.lces-cc-value", undf, [
+            jSh.dm(".lces-cc-label", "V"),
+            lcSlider({min: 0, max: 100, hideValue: true})
+          ])
         ])
       ])
-    ])
-  ])});
-
+    ])}),
+    
+    // Main color chooser modal container
+    screen: jSh.d({
+      sel: "#lces-colorchoosermodalcontainer.lces-themify",
+      events: {
+        // mousedown: function(e) {
+        //   var target = e.target;
+        //
+        //   if (target === this)
+        //     e.preventDefault();
+        // },
+        
+        wheel: function(e) {
+          e.preventDefault();
+        }
+      }
+    })
+  };
+  
+  lces.addInit(function() {
+    document.body.appendChild(lces.ui.colorchooser.screen);
+  }, 2);
+  
   window.lcColorChooser = function(refElm) {
     // Check if called as a template child
     var isTemplChild = lces.template.isChild(arguments, this);
@@ -96,17 +140,11 @@ lces.rc[6] = function() {
     // Inherit textfield traits
     lcTextField.call(this);
     
-    // Check for main color chooser modal container
-    var ccmContainer = jSh("#lces-colorchoosermodalcontainer");
-    
-    if (!ccmContainer) {
-      var ccmContainer = jSh.d("#lces-colorchoosermodalcontainer.lces-themify");
-      document.body.appendChild(ccmContainer);
-    }
+    var ccmContainer = lces.ui.colorchooser.screen;
     
     this.type = "LCES Color Chooser Widget";
     var that = this;
-    this.element = new lces.ui.colorChooserTemplate(this);
+    this.element = new lces.ui.colorchooser.template(this);
     
     var ccColor  = this.jSh(".lces-cc-color")[0];
     var cursor   = this.jSh(".lces-cc-cursor")[0];
@@ -117,6 +155,25 @@ lces.rc[6] = function() {
     var valSlide = this.jSh(".lces-slider")[1];
     var satRow   = this.jSh(".lces-cc-saturation")[0];
     var valRow   = this.jSh(".lces-cc-value")[0];
+    
+    // Add focusing functionality
+    ccColor.parentNode.addEventListener("keydown", function(e) {
+      if (e.keyCode === 32 || e.keyCode === 13)
+        e.preventDefault();
+      
+      if (that.modalVisible && e.keyCode === 27)
+        e.preventDefault();
+    });
+    
+    ccColor.parentNode.addEventListener("keyup", function(e) {
+      if (e.keyCode === 32 || e.keyCode === 13) {
+        that.modalVisible = true;
+        that.focused = true;
+      }
+      
+      if (e.keyCode === 27)
+        that.modalVisible = false;
+    });
     
     // Get stuff working
     ccmContainer.appendChild(modal);
@@ -152,16 +209,17 @@ lces.rc[6] = function() {
     this.setState("modalVisible", false);
     this.addStateListener("modalVisible", function(visible) {
       if (visible) {
+        ccmContainer.classList.add("visible");
         var ccRect = ccColor.parentNode.getBoundingClientRect();
         
         if (innerHeight - ccRect.bottom - 15 < modalHeight) {
           modal.classList.add("flipped");
-          modal.style.top = (scrollY + ccRect.top - modalHeight - 5) + "px";
-          modal.style.left = (scrollX + ccRect.left) + "px";
+          modal.style.top = (ccRect.top - modalHeight - 5) + "px";
+          modal.style.left = (ccRect.left) + "px";
         } else {
           modal.classList.remove("flipped");
-          modal.style.top = (scrollY + ccRect.top + (ccRect.bottom - ccRect.top)) + "px";
-          modal.style.left = (scrollX + ccRect.left) + "px";
+          modal.style.top = (ccRect.top + (ccRect.bottom - ccRect.top)) + "px";
+          modal.style.left = (ccRect.left) + "px";
         }
         
         modal.style.display = "block";
@@ -172,6 +230,7 @@ lces.rc[6] = function() {
       } else {
         clearTimeout(displayTimeout);
         modal.classList.remove("visible");
+        ccmContainer.classList.remove("visible");
       }
     });
     
@@ -186,21 +245,24 @@ lces.rc[6] = function() {
     
     // Opening/Closing event triggers/handlers
     var openingTimeout = null;
-    ccColor.addEventListener("mouseover", function() {
-      openingTimeout = setTimeout(function() {
-        that.modalVisible = true;
-        that.focused = true;
-        
-        openingTimeout = null;
-      }, 500);
-      
-      this.addEventListener("mouseout", function mouseout() {
-        this.removeEventListener("mouseout", mouseout);
-        
-        if (openingTimeout)
-          clearTimeout(openingTimeout);
-      });
-    });
+    
+    // TODO: Deduce whether this hover effect is really needed
+    //
+    // ccColor.addEventListener("mouseover", function() {
+    //   openingTimeout = setTimeout(function() {
+    //     that.modalVisible = true;
+    //     that.focused = true;
+    //
+    //     openingTimeout = null;
+    //   }, 500);
+    //
+    //   this.addEventListener("mouseout", function mouseout() {
+    //     this.removeEventListener("mouseout", mouseout);
+    //
+    //     if (openingTimeout)
+    //       clearTimeout(openingTimeout);
+    //   });
+    // });
     
     ccColor.addEventListener("click", function() {
       clearTimeout(openingTimeout);
@@ -231,6 +293,9 @@ lces.rc[6] = function() {
         return;
       }
       
+      // Change to array
+      colors = that.valueType === "array" ? colors : (jSh.type(colors) !== "array" ? sanitizeHex(colors) : colors);
+      
       // Validate colors
       if (!colors || jSh.type(colors) !== "array" || colors.length < 3)
         colors = [255, 255, 255];
@@ -240,8 +305,25 @@ lces.rc[6] = function() {
           colors[i] = 255;
       });
       
+      this.stateStatus = that.valueType === "array" ? colors : "#" + toHex(colors);
       that.displayColor([colors[0] / 255, colors[1] / 255, colors[2] / 255]);
     });
+    
+    // Value types for interfacing with an lcColorChooser instance's value
+    var valueTypes = ["array", "hex"];
+    
+    this.setState("valueType", "array");
+    this.addStateCondition("valueType", function(vType) {
+      if (typeof vType !== "string" || valueTypes.indexOf(vType.toLowerCase()) === -1)
+        return false;
+      
+      this.proposedValue = vType.toLowerCase();
+      return true;
+    });
+    
+    this.getValueArray = function() {
+      return this.valueType === "array" ? this.value : sanitizeHex(this.value);
+    }
     
     // Displays color
     this.displayColor = function(color) {
@@ -253,7 +335,7 @@ lces.rc[6] = function() {
       valSlide.value = colorHSV.v * 100;
       
       this.setCursor(colorHSV.h, colorHSV.s);
-      ccColor.style.background = "rgb(" + this.value.map(function(i){return Math.round(i);}).join(", ") + ")";
+      ccColor.style.background = "rgb(" + this.getValueArray().map(i => Math.round(i)).join(", ") + ")";
       wheelVal.style.opacity = (1 - colorHSV.v);
     }
     
@@ -290,9 +372,10 @@ lces.rc[6] = function() {
       
       that.updatingValue = true;
       var newValue = lces.ui.HSV2RGB(color.h, color.s, color.v);
-      this.value = [parseInt(newValue[0] * 255), parseInt(newValue[1] * 255), parseInt(newValue[2] * 255)];
+      newValue = [parseInt(newValue[0] * 255), parseInt(newValue[1] * 255), parseInt(newValue[2] * 255)];
       
-      ccColor.style.background = "rgb(" + this.value.map(function(i){return Math.round(i);}).join(", ") + ")";
+      this.value = this.valueType === "array" ? newValue : "#" + toHex(newValue);
+      ccColor.style.background = "rgb(" + this.getValueArray().map(function(i){return Math.round(i);}).join(", ") + ")";
     }
     
     this.setCursor = function(rot, dist) {
@@ -313,8 +396,9 @@ lces.rc[6] = function() {
         return;
       }
       
-      var color = lces.ui.RGB2HSV(that.value[0] / 255, that.value[1] / 255, that.value[2] / 255);
+      var color = lces.ui.RGB2HSV(that.getValueArray()[0] / 255, that.getValueArray()[1] / 255, that.getValueArray()[2] / 255);
       
+      console.log(value, this.component.min, this.component.max);
       that.setCursor(color.h, value / 100);
       that.updateColorValue();
     });
@@ -369,7 +453,7 @@ lces.rc[6] = function() {
     });
     
     // Finish measuring
-    this.value = [255, 255, 255];
+    this.value = this.valueType === "array" ? [255, 255, 255] : "#" + toHex(sanitizeHex("#"));
     modal.style.display = "none";
     this.classList.remove("visible");
     
