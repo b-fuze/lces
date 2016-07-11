@@ -279,7 +279,7 @@ lces.rc[0] = function() {
     }
     
     // Check if the args provided are all enclosed in an object
-    if (typeof className == "object") {
+    if (jSh.type(className) == "object") {
       var args = className;
 
       className  = args.className || args.class || args.sel;
@@ -334,9 +334,15 @@ lces.rc[0] = function() {
     
     if (child) {
       if (jSh.type(child) === "array") {
-        child.forEach(function (i) {
-          n.appendChild(i);
-        });
+        var frag = this.lcesElement || jSh.docFrag();
+        
+        for (var i=0,l=child.length; i<l; i++) {
+          frag.appendChild(child[i]);
+        }
+        
+        // Append if not LCES template element
+        if (!this.lcesElement)
+          n.appendChild(frag);
       } else
         n.appendChild(child);
     }
@@ -345,24 +351,28 @@ lces.rc[0] = function() {
     var checkNSAttr = /^ns:[^:]+:[^]*$/i;
     
     if (attributes) {
-      for (attr in attributes) {
-        if (attributes.hasOwnProperty(attr)) {
-          if (!checkNSAttr.test(attr) || jSh.MockupElement && n instanceof jSh.MockupElement)
-            n.setAttribute(attr, attributes[attr]);
-          else {
-            var nsURI = attr.replace(/^ns:[^:]+:([^]*)$/i, "$1");
-            var nsAttr = attr.replace(/^ns:([^:]+):[^]*$/i, "$1");
-            
-            n.setAttributeNS(nsURI ? nsURI : null, nsAttr, attributes[attr]);
-          }
+      var attrs = Object.getOwnPropertyNames(attributes);
+      
+      for (var i=0,l=attrs.length; i<l; i++) {
+        var attr = attrs[i];
+        
+        if (!checkNSAttr.test(attr) || jSh.MockupElement && n instanceof jSh.MockupElement)
+          n.setAttribute(attr, attributes[attr]);
+        else {
+          var nsURI = attr.replace(/^ns:[^:]+:([^]*)$/i, "$1");
+          var nsAttr = attr.replace(/^ns:([^:]+):[^]*$/i, "$1");
+          
+          n.setAttributeNS(nsURI ? nsURI : null, nsAttr, attributes[attr]);
         }
       }
     }
 
     if (properties) {
-      for (prop in properties) {
-        if (properties.hasOwnProperty(prop))
-          n[prop] = properties[prop];
+      var props = Object.getOwnPropertyNames(properties);
+      
+      for (var i=0,l=props.length; i<l; i++) {
+        var prop = props[i];
+        n[prop] = properties[prop];
       }
     }
     

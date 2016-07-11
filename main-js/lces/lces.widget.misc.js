@@ -2,54 +2,79 @@ lces.rc[3] = function() {
   lces._WidgetInit();
   
   // lcDraggable for draggable functionality Z
-  window.lcDraggable = function(anchor, target) {
+  window.lcDraggable = function(anchor, target, lcWindow) {
     var that = this;
     this._drag = {};
     
+    var targetWidth  = null;
+    var targetHeight = null;
+    var rightBound   = null;
+    
     this.onDrag = function(e) {
+      var that = this;
       e.preventDefault();
       
-      if (that.centered)
+      if (this.centered)
         return false;
       
-      that._drag.mouseX = e.clientX;
-      that._drag.mouseY = e.clientY;
-      that._drag.winX = target.offsetLeft;
-      that._drag.winY = target.offsetTop;
+      if (lcWindow) {
+        var bRect = target.getBoundingClientRect();
+        
+        var tLeft = bRect.left;
+        var tTop  = bRect.top;
+      } else {
+        var tLeft = target.offsetLeft;
+        var tTop  = target.offsetTop;
+      }
       
-      window.addEventListener("mousemove", that.onDragging);
-      window.addEventListener("mouseup", function() {
+      this._drag.mouseX = e.clientX;
+      this._drag.mouseY = e.clientY;
+      this._drag.winX = tLeft;
+      this._drag.winY = tTop;
+      
+      targetWidth  = target.offsetWidth;
+      targetHeight = target.offsetHeight;
+      rightBound   = innerWidth - targetWidth - this.borderOffset;
+      bottomBound  = innerHeight - targetHeight - this.borderOffset;
+      
+      window.addEventListener("mousemove", this.onDragging);
+      window.addEventListener("mouseup", function handler() {
         window.removeEventListener("mousemove", that.onDragging);
-        window.removeEventListener("mouseup", arguments.callee);
+        window.removeEventListener("mouseup", handler);
       });
     }
     
     this.onDragging = function(e) {
+      var borderOffset = that.borderOffset;
       e.preventDefault();
       
-      
       var newX = that._drag.winX + (e.clientX - that._drag.mouseX);
-      if (newX > innerWidth - target.offsetWidth - that.borderOffset)
-        newX = innerWidth - target.offsetWidth - that.borderOffset;
-      else if (newX < that.borderOffset)
-        newX = that.borderOffset;
+      if (newX > rightBound)
+        newX = rightBound;
+      else if (newX < borderOffset)
+        newX = borderOffset;
       
       var newY = that._drag.winY + (e.clientY - that._drag.mouseY);
-      if (newY < that.borderOffset)
-        newY = that.borderOffset;
-      else if (innerHeight > target.offsetHeight + that.borderOffset * 4 && newY > innerHeight - target.offsetHeight - that.borderOffset)
-        newY = innerHeight - target.offsetHeight - that.borderOffset;
+      if (newY < borderOffset)
+        newY = borderOffset;
+      else if (innerHeight > targetHeight + borderOffset * 4 && newY > bottomBound)
+        newY = bottomBound;
       
-      target.style.left = newX + "px";
-      target.style.top = newY + "px";
+      if (lcWindow) {
+        target.style.transform = `translate3d(${newX}px, ${newY}px, 0px)`;
+      } else {
+        target.style.left = newX + "px";
+        target.style.top = newY + "px";
+      }
     }
     
+    var onDragBound = this.onDrag.bind(this);
     this.setState("draggable", false);
     this.addStateListener("draggable", function(draggable) {
       if (draggable)
-        anchor.addEventListener("mousedown", that.onDrag);
+        anchor.addEventListener("mousedown", onDragBound);
       else
-        anchor.removeEventListener("mousedown", that.onDrag);
+        anchor.removeEventListener("mousedown", onDragBound);
     });
     
     this.borderOffset = 20;

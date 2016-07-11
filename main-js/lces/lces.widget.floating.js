@@ -34,8 +34,8 @@ lces.rc[7] = function() {
       // Create the window from a reference
       e = jSh(e);
       
-      var className     = e.getAttribute("class");
-      var windowHTMLId  = e.getAttribute("id");
+      var className    = e.getAttribute("class");
+      var windowHTMLId = e.getAttribute("id");
       
       var lcesTitle   = e.jSh("lces-title")[0];
       var lcesContent = e.jSh("lces-contents")[0];
@@ -135,12 +135,13 @@ lces.rc[7] = function() {
       this._buttonpanel.removeChild(button.element);
     }
     
-    
-    
     // Add draggable functionality with the title as the anchor and the container as the target
-    lcDraggable.call(this, this.container.getChild(0).getChild(0).getChild(0), this.container);
-    
-    
+    lcDraggable.call(
+      this,
+      this.container.getChild(0).getChild(0).getChild(0),
+      this.container,
+      true // True to enable optimizations for lcWindow
+    );
     
     // Window fade in effect
     // onTransitionEnd(this.container, function(e) {
@@ -186,12 +187,16 @@ lces.rc[7] = function() {
     }
     
     this._center = function() {
-      this.container.style.left = ((innerWidth - this.container.offsetWidth) / 2) + "px";
-      
       var top = ((innerHeight - this.container.offsetHeight) / 2);
       top = top < this.borderOffset ? this.borderOffset : top;
+      var left = ((innerWidth - this.container.offsetWidth) / 2);
       
-      this.container.style.top = top + "px";
+      // Center with GPU
+      this.container.style.transform = `translate3d(${left}px, ${top}px, 0px)`;
+      
+      // The old way of centering:
+      // this.container.style.left = ((innerWidth - this.container.offsetWidth) / 2) + "px";
+      // this.container.style.top = top + "px";
     }
     
     this.setState("centered", false);
