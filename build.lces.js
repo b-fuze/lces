@@ -6,7 +6,7 @@
 var fs       = require("fs");
 var path     = require("path");
 var uglifyjs = require("uglify-js");
-var babel    = require("babel-core");
+// var babel    = require("babel-core");
 
 // CD to the current dir
 process.chdir(path.dirname(process.argv[1]));
@@ -198,9 +198,9 @@ getFolder(LCPATH + "main-js/lces");
 incl.forEach(file => LCSRC += getFile(file));
 
 // Transform to ES5.1
-var result = cat ? LCSRC : babel.transform(LCSRC, {presets: ["es2015"]}).code;
+// var result = cat ? LCSRC : babel.transform(LCSRC, {presets: ["es2015"]}).code;
 // Uglify this shit
-result = cat ? result : uglify(result);
+var result = cat ? LCSRC : uglify(LCSRC);
 
 // Concat everything
 result = `${debug ? `try { ` : ""} ${result} ${debug ? ` } catch (e) { alert(e + "\\n\\n\\n" + e.stack); }` : ""}`;
