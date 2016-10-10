@@ -450,11 +450,14 @@ lces.rc[5] = function() {
     this.testInt = new RegExp("^\\d{0," + this.digits + "}$");
     this.testFloat = new RegExp("^\\d{0," + this.digits + "}(?:\\.\\d{0," + this.decimalPoints + "})?$");
     this.testInput = function() {
-      if (that.integer && !that.testInt.test(this.value) || !that.integer && !that.testFloat.exec(this.value)) {
+      var curValueFloat = parseFloat(this.value);
+      var curValueInt   = parseInt(this.value);
+      
+      if (isNaN(curValueFloat) || that.integer && curValueFloat !== curValueInt) {
         this.value = that.oldValue;
-      } else if (jSh.type(that.min) == "number" && parseFloat(this.value) < that.min) {
+      } else if (typeof that.min == "number" && curValueFloat < that.min) {
         this.value = that.min;
-      } else if (jSh.type(that.max) == "number" && parseFloat(this.value) > that.max) {
+      } else if (typeof that.max == "number" && curValueFloat > that.max) {
         this.value = that.max;
       } else {
         that.oldValue = this.value;

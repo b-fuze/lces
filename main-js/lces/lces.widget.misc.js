@@ -11,6 +11,9 @@ lces.rc[3] = function() {
     var rightBound   = null;
     
     this.onDrag = function(e) {
+      if (e.button !== 0)
+        return false;
+      
       var that = this;
       e.preventDefault();
       
@@ -460,6 +463,22 @@ lces.rc[3] = function() {
           this.component.setAttr("style", "");
           this.component.classList.add("lces-user-text-color");
         }
+      }
+    },
+    "anchor": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("a", {prop: {href: params}}));
+      },
+      update: function(s) {
+        this.component.element.href = s;
+      }
+    },
+    "anchor-blank": {
+      node: function(params, context) {
+        return new lcWidget(jSh.c("a", {prop: {href: params, target: "_blank"}}));
+      },
+      update: function(s) {
+        this.component.element.href = s;
       }
     },
     "font": {

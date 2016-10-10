@@ -4,6 +4,11 @@ lces.rc[2] = function() {
   // LCES JS code (Acronym Galore! :D)
   // On another note, these *LV* things might be useless...
   
+  // lces stats
+  lces.LCES = {
+    objectCount: 0
+  };
+  
   lces.global.LCESVar = function(n) {
     this.LCESVAR = true; // Might be needed in the future.
     this.id = n;
@@ -44,25 +49,19 @@ lces.rc[2] = function() {
     // AUCP Linked Component Event System I guess.
     // I like thinking up weird names, LCES is pronounced "Elsis" btw...
 
-    if (this.type)
+    if (this.__LCESCOMPONENT__)
       return true;
 
-    this.type = "LCES Component";
-    this.isLCESComponent = true;
-
     // Use this to distinguish between instanced LCES components
-    this.LCESID = LCES.components.length;
+    this.LCESID = ++lces.LCES.objectCount;
+    var that = this;
     
     // If noReference is on then it just appends null
-    LCES.components.push(lces.noReference ? null : this);
+    if (!lces.noReference)
+      LCES.components.push(this);
 
     this.states = {};
-
-    this.dataLinks = [];
-
     this.extensionData = []; // Data for extensions
-
-    var that = this;
 
     // Check if needs to add methods manually
     if (!(this instanceof lcComponent)) {
@@ -77,11 +76,13 @@ lces.rc[2] = function() {
         LCES.components[LCESName] = that;
     });
     this.addStateCondition("LCESName", function(LCESName) {
-      if (this.get()) {
-        if (this.get() === LCESName)
+      var curValue = this.get();
+      
+      if (curValue) {
+        if (curValue === LCESName)
           return false;
         
-        LCES.components[this.get()] = undefined;
+        LCES.components[curValue] = undefined;
       }
 
       return true;
@@ -103,11 +104,14 @@ lces.rc[2] = function() {
     // Add the event array
     this.events = [];
     
+    jSh.constProp(this, "__LCESCOMPONENT__", 1);
     return false; // Not being extended or anything, a new component.
   }
   
   jSh.extendObj(lcComponent.prototype, {
-    __lcComponent__: 1
+    __lcComponent__: 1,
+    type: "LCES Component",
+    isLCESComponent: true
   });
   
   lcComponent.prototype.constructor = lcComponent;
@@ -161,10 +165,12 @@ lces.rc[2] = function() {
   
   jSh.extendObj(lcComponent.prototype, {
     setState: function(state, stateStatus, recurring, recurred) {
-      if (!this.states[state]) {
+      var stateObject = this.states[state];
+      
+      if (!stateObject) {
         // Since we don't have it, we'll make it.
-
-        this.states[state] = {
+        
+        stateObject = {
           component: this,
           name: state,
           set: function(stateStatus) {this.component.setState(state, stateStatus);},
@@ -178,13 +184,14 @@ lces.rc[2] = function() {
           private: false, // If true then data links (lcGroup) can't change it.
           flippedStateCall: false,
           linkedStates: {} // {state: "state", func: func}
-        }
-
+        };
+        
+        this.states[state] = stateObject;
         var that = this;
+
         Object.defineProperty(this, state, {configurable: true, set: function(stateStatus) { that.setState(state, stateStatus); }, get: function() { return that.getState(state); }});
       }
 
-      var stateObject = this.states[state];
       var stateCond   = stateObject.conditions;
       var canContinue = true;
       
@@ -240,12 +247,16 @@ lces.rc[2] = function() {
     },
 
     addStateListener: function(state, stateFunc) {
-      if (!this.states[state]) {
+      var stateObject = this.states[state];
+      
+      if (!stateObject) {
         this.setState(state, undf);
         // console.warn(state + " doesn't exist"); // NOTICE: Removed for redundancy
+        
+        stateObject = this.states[state];
       }
       
-      this.states[state].functions.push(stateFunc);
+      stateObject.functions.push(stateFunc);
     },
 
     addStateCondition: function(state, conditionFunc) {
@@ -1011,3 +1022,7 @@ lces.rc[2] = function() {
   // Add initSystem to lces
   lces.initSystem.call(lces);
 }
+
+// If only jSh run LCES
+if (lces.onlyjSh)
+  lces.rc[2]();
