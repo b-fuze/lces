@@ -60,6 +60,10 @@ lces.rc[10] = function() {
   lces.user.settings = new lcComponent();
   var settings = lces.user.settings;
   
+  // True when setting a temporary value
+  var tempSetting    = false;
+  var tempSettingVal = null;
+  
   // Setting entry constructor
   //
   // multiple: Array. Optional.
@@ -222,8 +226,18 @@ lces.rc[10] = function() {
   jSh.inherit(settings.Setting, lcComponent);
   
   function onSettChange() {
-    settings.triggerEvent("settingChange", {setting: this.name, value: this.stateStatus});
-    this.component.triggerEvent(this.name, {value: this.stateStatus});
+    var generalEvtObj  = {setting: this.name, value: tempSetting ? tempSettingVal : this.stateStatus};
+    var specificEvtObj = {value: tempSetting ? tempSettingVal : this.stateStatus};
+    
+    if (tempSetting) {
+      tempSetting = false;
+      
+      generalEvtObj.temporary = true;
+      specificEvtObj.temporary = true;
+    }
+    
+    settings.triggerEvent("settingChange", generalEvtObj);
+    this.component.triggerEvent(this.name, specificEvtObj);
   }
   
   settings.addEvent("settingChange");
@@ -320,8 +334,14 @@ lces.rc[10] = function() {
     
     path = path.split(".");
     
-    var curGroup = getDefault ? settings.default : settings.user;
+    var temporary = false;
+    var curGroup  = getDefault ? settings.default : settings.user;
     var group;
+    
+    if (path[0] === "tmp") {
+      temporary = true;
+      path.splice(0, 1);
+    }
     
     for (var i=0,l=path.length; i<l; i++) {
       var obj = curGroup[path[i]];
@@ -358,8 +378,10 @@ lces.rc[10] = function() {
   }
   
   settings.set = function(path, value, recurring) {
-    var groupPath = path.split(".");
-    var settName  = groupPath.pop();
+    var groupPath  = path.split(".");
+    var settName   = groupPath.pop();
+    tempSetting    = groupPath[0] === "tmp";
+    tempSettingVal = value;
     
     var setting = settings.settObtain(path);
     
@@ -367,7 +389,7 @@ lces.rc[10] = function() {
     if (!setting) {
       return false;
     } else {
-      setting.userGroup.setState(settName, value, recurring);
+      setting.userGroup.setState(settName, tempSetting ? tempSettingVal : value, recurring);
     }
     
     return true;

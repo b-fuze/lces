@@ -3,7 +3,7 @@ lces.rc[7] = function() {
 
   lces.ui.Windows = [];
   window.lcWindow = function(e, name) {
-    lcWidget.call(this, e ? e.getElementsByClassName("lces-window-contents")[0] : jSh.d("lces-window-contents"));
+    lcWidget.call(this, e ? e.getElementsByClassName(".lces-window-contents")[0] : jSh.d(".lces-window-contents"));
     var that = this;
     
     this.windowID = lces.ui.Windows.length;
@@ -12,12 +12,8 @@ lces.rc[7] = function() {
     // Array to contain the buttons
     this.buttons = [];
     
-    // For dragging and centered states, relative from the viewport
+    // For "draggable" and "centered" LCES states, relative from the viewport
     this.borderOffset = 20;
-    
-    // Check for the main window container grouping element
-    // if (!jSh("#windowcontainer"))
-    //
     
     // Get or create the window element
     if (!e) {
@@ -28,7 +24,7 @@ lces.rc[7] = function() {
         jSh.d("lces-window-buttonpanel")
       ])));
       
-      jSh("#windowcontainer").appendChild(this.container);
+      jSh("#lces-windowcontainer").appendChild(this.container);
       
     } else {
       // Create the window from a reference
@@ -57,7 +53,7 @@ lces.rc[7] = function() {
         jSh.d("lces-window-buttonpanel", undf, lcesButtons ? jSh.toArr(lcesButtons.childNodes) : undf)
       ])));
       
-      jSh("#windowcontainer").appendChild(this.container);
+      jSh("#lces-windowcontainer").appendChild(this.container);
       
       // Cleanup
       e.parentNode.removeChild(e);
@@ -464,7 +460,6 @@ lces.rc[7] = function() {
     this.setState("visible");
     
     var container = this.container;
-    var lces = window.lces;
     
     this._visibleTimeout = null;
     this._visibleAnim    = null;
@@ -718,7 +713,7 @@ lces.rc[7] = function() {
   
   lces.addInit(function() {
     document.body.appendChild(jSh.d({
-      sel: "#windowcontainer.lces-themify",
+      sel: "#lces-windowcontainer.lces-themify",
       attr: {
         style: "text-align: left;"
       }

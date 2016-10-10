@@ -959,7 +959,7 @@ table.lces tr td {
   opacity: 0;
   color: #484848;
   line-height: 1.6;
-  transition: opacity 400ms ease-out;
+  transition: opacity 250ms ease-out;
 }
 
 .lces-window[visible] {
@@ -1016,12 +1016,12 @@ table.lces tr td {
 .lces-notification {
   border-radius: 3px;
   position: static;
-  width: 275px;
+  width: 300px;
   box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.2);
   cursor: default;
 }
 .lces-notification[visible] {
-  opacity: 0.9;
+  opacity: 0.95;
 }
 .lces-notification > div {
   /*background: transparent !important;*/
@@ -1067,9 +1067,16 @@ table.lces tr td {
   left: 5px;
 }
 .notifi-center {
-  left: 5px;
-  right: 5px;
+  margin-right: auto;
+  margin-left: auto;
+  left: 0px;
+  right: 0px;
   text-align: center;
+  width: 0px;
+}
+
+.notifi-center .lces-window.lces-notification {
+  transform: translate(-50%);
 }
 
 .notifi-center .lces-notification {

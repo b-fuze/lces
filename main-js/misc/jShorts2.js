@@ -33,7 +33,7 @@ lces.rc[0] = function() {
     if (typeof src === "string" || typeof src === "number") {
       // "Locate" mode
       
-      var parent   = this === jSh.global ? document : (this instanceof Node || jSh.MockupElement && this instanceof jSh.MockupElement ? this : (lces.global.lcWidget && this instanceof lcWidget ? this.element : document));
+      var parent   = this === jSh.global ? document : (this instanceof Node || jSh.MockupElement && this instanceof jSh.MockupElement || this instanceof HTMLDocument ? this : (lces.global.lcWidget && this instanceof lcWidget ? this.element : document));
       var selector = jSh.determineSelector(src);
       var result   = jSh[selector](selector === "queryAll" || selector === "tag" || selector === "getChild" ? src : src.substr(1), parent, first);
       
@@ -79,7 +79,7 @@ lces.rc[0] = function() {
       // "Shorten" mode
       // In this mode «first» is referring to whether to enclose it in an lcWidget
       
-      var e = jSh.determineType(src);
+      var e = jSh.determineType(src, true);
       
       if (!e)
         return src;
@@ -210,7 +210,7 @@ lces.rc[0] = function() {
     return str;
   }
   
-  jSh.strCapitalise = function(str) {
+  jSh.strCapitalize = function(str) {
     str = str + "";
     
     return str[0].toUpperCase() + str.slice(1).toLowerCase();
@@ -394,7 +394,7 @@ lces.rc[0] = function() {
   };
 
   // Create a 'type' DOM element with flexible nesting system
-  jSh.c = function nodeC(type, className, text, child, attributes, properties) { // Node Custom
+  jSh.c = function nodeC(type, className, text, child, attributes, properties) { // Custom node
     return jSh.d.call({lcesType: type}, className, text, child, attributes, properties);
   }
 
@@ -624,11 +624,11 @@ lces.rc[0] = function() {
   }
 
   // For distinguishing between lcWidget and a Node instance
-  jSh.determineType = function(obj) {
+  jSh.determineType = function(obj, jShDetermine) {
     if (!obj)
       return false;
     
-    if (obj instanceof Node)
+    if (obj instanceof Node || obj instanceof HTMLDocument && jShDetermine)
       return obj;
     
     // MockupElement
