@@ -236,6 +236,10 @@ lces.rc[3] = function() {
     var scrollbar      = new lcComponent();
     this.lcesScrollbar = scrollbar;
     
+    // Add lcesscroll event to component
+    scrollbar.addEvent("lcesscroll");
+    scrollbar.addEvent("scrollbarvisible");
+    
     scrollbar.scrollContent = this.scrollbarContent || scrollContent || e; // I dunno how it'll work with e, but whatever.
     scrollbar.scrollDist    = lces.ui.scrollBarScroll;
     scrollbar.setState("visible", false);
@@ -285,8 +289,11 @@ lces.rc[3] = function() {
         contentScrolled = physicalScrollMax * (sbScrolled / scrollTopMax);
         scrollbar.scrollContent.scrollTop = contentScrolled;
       } else {
-        elem.style.top = ((contentScrolled / physicalScrollMax) * scrollTopMax) + "px";
+        sbScrolled = ((contentScrolled / physicalScrollMax) * scrollTopMax);
+        elem.style.top = sbScrolled  + "px";
       }
+      
+      scrollbar.triggerEvent("lcesscroll", {scroll: contentScrolled});
     }
     
     scrollbar.scroll = function(dir, e) {
@@ -295,14 +302,39 @@ lces.rc[3] = function() {
       
       contentScrolled = Math.min(Math.max(contentScrolled + lces.ui.scrollBarScroll * dir, 0), physicalScrollMax);
       scrollbar.scrollContent.scrollTop = contentScrolled;
-      // elem.style.top = sbScrolled + "px"; // TODO: Remove when fully switched reliance to content instead of scrollbar
       
-      if (oldScroll !== sbScrolled) {
+      if (oldScroll !== contentScrolled) {
         updateContentScroll(true);
         
         e.preventDefault();
       }
     }
+    
+    scrollbar.scrollTo = function(dest, position) {
+      var oldScroll = contentScrolled;
+      
+      if (typeof dest === "number" && !isNaN(dest)) {
+        contentScrolled = Math.min(Math.max(dest, 0), physicalScrollMax);
+        scrollbar.scrollContent.scrollTop = contentScrolled;
+        
+        if (oldScroll !== contentScrolled) {
+          updateContentScroll(true);
+        }
+      } else if (dest instanceof Node) {
+        var cRect = scrollbar.scrollContent.getBoundingClientRect();
+        var tRect = dest.getBoundingClientRect();
+        
+        var cMid = ((cRect.top + cRect.bottom) / 2);
+        var tMid = ((tRect.top + tRect.bottom) / 2);
+        
+        contentScrolled = Math.min(Math.max(contentScrolled + (tMid - cMid), 0), physicalScrollMax);
+        scrollbar.scrollContent.scrollTop = contentScrolled;
+        
+        if (oldScroll !== contentScrolled) {
+          updateContentScroll(true);
+        }
+      }
+    };
     
     function windowMove(e) {
       sbScrolled = Math.min(Math.max(windowMove.scroll + (e.clientY - windowMove.y), 0), scrollTopMax);
@@ -336,6 +368,21 @@ lces.rc[3] = function() {
         
         sbScrolled = Math.min(Math.max(top, 0), scrollTopMax);
         elem.style.top = sbScrolled + "px";
+        
+        // Keep scrolling after clicking on the trough
+        windowMove.scroll = sbScrolled;
+        windowMove.y = e.clientY;
+        
+        lces.ui.sbScrolling = true;
+        
+        window.addEventListener("mousemove", windowMove);
+        window.addEventListener("mouseup", function mup() {
+          window.removeEventListener("mousemove", windowMove);
+          window.removeEventListener("mouseup", mup);
+          
+          trough.classList.remove("active");
+          lces.ui.sbScrolling = false;
+        });
         
         updateContentScroll();
       }
@@ -378,6 +425,8 @@ lces.rc[3] = function() {
       elem.style.top = Math.min(sbScrolled, scrollTopMax) + "px";
       sbScrolled = Math.min(jSh.numOp(sbScrolled, 0), scrollTopMax);
       scrollContent.scrollTop = Math.min(physicalScrollMax, scrollContent.scrollTop);
+      
+      scrollbar.triggerEvent("scrollbarvisible", {visible: !!physicalScrollMax});
     }
     
     if (lces.ui.scrollBarsEnabled) {

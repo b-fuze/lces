@@ -48,6 +48,8 @@ function multipleArg(i, arr, dump, comma) {
 var out   = null;
 var cat   = null;
 var debug = null;
+var init  = false;
+var core  = false;
 var excl  = ["lces.core.js"];
 var incl  = [];
 var themify;
@@ -74,6 +76,14 @@ for (var i=0,l=args.length; i<l; i++) {
       
       case "-add":
         i = multipleArg(i, args, incl);
+      break;
+      
+      case "-core":
+        core = true;
+      break;
+      
+      case "-init":
+        init = true;
       break;
     }
   } else {
@@ -186,16 +196,30 @@ function uglify(src) {
 
 // Get core files
 getFile(LCPATH + "main-js/misc/jShorts2.js");
-getFile(LCPATH + "main-js/misc/css.essentials.js");
+if (!init)
+  getFile(LCPATH + "main-js/misc/css.essentials.js");
 getFile(LCPATH + "main-js/lces/lces.core.js");
-if (themify)
+if (!core && themify)
   getFile(LCPATH + "main-js/lces/lces.ui.themify.js");
 
 // Get core modules
-getFolder(LCPATH + "main-js/lces");
+if (!init)
+  getFolder(LCPATH + "main-js/lces");
 
 // Get extra modules if any
 incl.forEach(file => LCSRC += getFile(file));
+
+// Add auto initiating LCES code
+if (init) {
+  LCSRC =
+`function lces(id) {
+  return LCES.components[id];
+}
+
+lces.rc = [];`
+  + LCSRC +
+  `lces.rc.forEach(f => f());`;
+}
 
 // Transform to ES5.1
 // var result = cat ? LCSRC : babel.transform(LCSRC, {presets: ["es2015"]}).code;
@@ -203,7 +227,7 @@ incl.forEach(file => LCSRC += getFile(file));
 var result = cat ? LCSRC : uglify(LCSRC);
 
 // Concat everything
-result = `${debug ? `try { ` : ""} ${result} ${debug ? ` } catch (e) { alert(e + "\\n\\n\\n" + e.stack); }` : ""}`;
+result = `${debug ? "try { " : ""}${result} ${debug ? ` } catch (e) { alert(e + "\\n\\n\\n" + e.stack); }` : ""}`;
 
 // Remove strict
 if (!cat)
