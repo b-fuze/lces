@@ -30,48 +30,95 @@ lces.rc[0] = function() {
 
   // Main DOM Manipulation function
   lces.global.jSh = function jSh(src, first) {
-    if (typeof src === "string" || typeof src === "number") {
+    var parent, doc, result;
+    
+    if (typeof src === "string") {
       // "Locate" mode
       
-      var parent   = this === jSh.global ? document : (this instanceof Node || jSh.MockupElement && this instanceof jSh.MockupElement || this instanceof HTMLDocument ? this : (lces.global.lcWidget && this instanceof lcWidget ? this.element : document));
-      var selector = jSh.determineSelector(src);
-      var result   = jSh[selector](selector === "queryAll" || selector === "tag" || selector === "getChild" ? src : src.substr(1), parent, first);
+      if (this === jShGlobal) {
+        doc = true;
+        parent = document;
+      } else
+        parent = this instanceof Node || jSh.MockupElement && this instanceof jSh.MockupElement || this instanceof HTMLDocument ? this : (lces.global.lcWidget && this instanceof lcWidget ? this.element : document);
+      
+      // Determine selector and return elements
+      if (isID.test(src)) {
+        if (doc) {
+          result = document.getElementById(src.substr(1));
+        } else {
+          doc = jSh.MockupElement && parent instanceof jSh.MockupElement ? parent : (parent ? (parent.ownerDocument || parent) : document);
+          result = doc.getElementById(src.substr(1));
+        }
+      } else if (isClass.test(src)) {
+        result = jSh.toArr(parent.getElementsByClassName(src.substr(1)));
+      } else if (isPH.test(src)) {
+        src = src.substr(1).toLowerCase();
+        
+        result = jSh.oneOrArr(jSh.toArr(parent.getElementsByTagName("lces-placeholder")).filter(function(i) {return i.phName && i.phName.toLowerCase() === src;}));
+      } else if (isTag.test(src)) {
+        result = jSh.toArr(parent.getElementsByTagName(src));
+      } else { // Must be rocket science queries, back to queryselectAll...
+        if (first) {
+          result = parent.querySelector(src);
+        } else {
+          result = jSh.toArr(parent.querySelectorAll(src));
+        }
+      }
       
       // Shorten them
       if (result) {
-        if (jSh.type(result) === "array") {
-          for (var i=0,l=result.length; i<l; i++) {
+        if (result instanceof Array) {
+          for (var i=result.length-1; i>-1; i--) {
             var elm = result[i];
-            
+      
             if (!elm.jSh) {
-              elm.getParent = jSh.getParent;
-              elm.getChild  = jSh.getChild;
-              elm.css       = jSh.setCSS;
-              elm.on        = jSh.onEvent;
+              elm.getParent = getParent;
+              elm.getChild  = getChild;
+              elm.css       = setCSS;
+              elm.on        = onEvent;
               elm.jSh       = jSh;
-              
+      
               // Improve append and removechild methods
               elm.__apch = elm.appendChild;
               elm.__rmch = elm.removeChild;
-              
+      
               elm.appendChild = jSh.elementExt.appendChild;
               elm.removeChild = jSh.elementExt.removeChild;
             }
           }
         } else if (!result.jSh) {
-          result.getParent = jSh.getParent;
-          result.getChild  = jSh.getChild;
-          result.css       = jSh.setCSS;
-          result.on        = jSh.onEvent;
+          result.getParent = getParent;
+          result.getChild  = getChild;
+          result.css       = setCSS;
+          result.on        = onEvent;
           result.jSh       = jSh;
-          
+      
           // Improve append and removechild methods
           result.__apch = result.appendChild;
           result.__rmch = result.removeChild;
-          
-          result.appendChild = jSh.elementExt.appendChild;
-          result.removeChild = jSh.elementExt.removeChild;
+      
+          result.appendChild = elementExt.appendChild;
+          result.removeChild = elementExt.removeChild;
         }
+      }
+      
+      return result;
+    } else if (typeof src === "number") {
+      result = getChild.call(this, src);
+      
+      if (result && !result.jSh) {
+        result.getParent = getParent;
+        result.getChild  = getChild;
+        result.css       = setCSS;
+        result.on        = onEvent;
+        result.jSh       = jSh;
+    
+        // Improve append and removechild methods
+        result.__apch = result.appendChild;
+        result.__rmch = result.removeChild;
+    
+        result.appendChild = elementExt.appendChild;
+        result.removeChild = elementExt.removeChild;
       }
       
       return result;
@@ -95,17 +142,17 @@ lces.rc[0] = function() {
   }
   
   // Global
-  jSh.global = lces.global;
-
+  var jShGlobal = jSh.global = lces.global;
+  
   // JS functions
-
+  
   // Check something's type when typeof isn't reliable
   jSh.type = function(obj) {
-    return Object.prototype.toString.call(obj).replace(/\[object\s([\w\d]+)\]/, "$1").toLowerCase();
+    return Object.prototype.toString.call(obj).match(/\[object\s([\w\d]+)\]/)[1].toLowerCase();
   }
-
+  
   jSh.pushItems = function(array) {
-    var items = jSh.toArr(arguments).slice(1);
+    var items = jSh.toArr(arguments);
     
     items.forEach(function(i) {
       array.push(i);
@@ -151,10 +198,14 @@ lces.rc[0] = function() {
 
   // Extend the first object with the own properties of another, exclude is an array that contains properties to be excluded
   jSh.extendObj = function(obj, extension, exclude) {
-    Object.getOwnPropertyNames(extension).forEach(function(i) {
-      if (!exclude || exclude.indexOf(i) === -1)
-        obj[i] = extension[i];
-    });
+    var objNames = Object.getOwnPropertyNames(extension);
+    
+    for (var i=objNames.length-1; i>-1; i--) {
+      var name = objNames[i];
+      
+      if (!exclude || exclude.indexOf(name) === -1)
+        obj[name] = extension[name];
+    }
     
     return obj;
   }
@@ -255,7 +306,7 @@ lces.rc[0] = function() {
 
   // Create HTML DOM Div elements with a flexible nesting system
   jSh.d = function node(className, text, child, attributes, properties, events) { // For creating an element
-    var nsElm; // For things like SVG... Ugggh. :|
+    var nsElm, elmClassName; // For things like SVG... Ugggh. :|
     
     if (!this.lcesElement) {
       // Check if we need to make an element with a custom namespace URI
@@ -279,15 +330,17 @@ lces.rc[0] = function() {
     }
     
     // Check if the args provided are all enclosed in an object
-    if (jSh.type(className) == "object") {
+    if (className instanceof Object) {
       var args = className;
 
-      className  = args.className || args.class || args.sel;
-      text       = args.text;
-      child      = args.child || args.children;
-      attributes = args.attributes || args.attr;
-      properties = args.properties || args.prop || args.props;
-      events     = args.events;
+      elmClassName = args.className || args.class || args.sel;
+      text         = args.text;
+      child        = args.child || args.children;
+      attributes   = args.attributes || args.attr;
+      properties   = args.properties || args.prop || args.props;
+      events       = args.events;
+    } else {
+      elmClassName = className;
     }
     
     // Check for an arguments availability and apply it if detected
@@ -296,19 +349,20 @@ lces.rc[0] = function() {
     var id       = "";
     var newClass = "";
     
-    if (className) {
+    if (elmClassName) {
       var validFormat = /^(?:#[a-zA-Z\d\-_]+)?(?:\.[a-zA-Z\d\-_]+)+$|^#[a-zA-Z\d\-_]+(?:\.[a-zA-Z\d\-_]+)*$/;
-      var hasClass    = /\.([a-zA-Z\d\-_]+)/g;
+      var hasClass    = /\.[a-zA-Z\d\-_]+/g;
       var hasId       = /#([a-zA-Z\d\-_]+)/;
       
-      if (validFormat.test(className)) {
-        if (hasClass.test(className))
-          newClass = jSh.toArr(className.match(hasClass)).map(function(i){return i.substr(1);});
-        
-        if (hasId.test(className))
-          id = className.match(hasId)[0].substr(1);
+      if (validFormat.test(elmClassName)) {
+        newClass = jSh.toArr(elmClassName.match(hasClass) || []);
+        id       = elmClassName.match(hasId);
         
         if (newClass.length > 0) {
+          for (var i=newClass.length-1; i>-1; i--) {
+            newClass[i] = newClass[i].substr(1);
+          }
+          
           // Workaround for things like SVG that don't have a simple .className property
           if (!nsElm)
             n.className = newClass.join(" ");
@@ -317,15 +371,15 @@ lces.rc[0] = function() {
         }
       } else {
         if (!nsElm)
-          n.className = className;
+          n.className = elmClassName;
         else
-          attributes["class"] = className;
+          attributes["class"] = elmClassName;
       }
     }
     
     
     if (id)
-      n.id = id;
+      n.id = id[1];
     
     if (text) {
       n[text.t ? "innerHTML" : "textContent"] = (text.s ? text.s : text);
@@ -333,7 +387,7 @@ lces.rc[0] = function() {
     }
     
     if (child) {
-      if (jSh.type(child) === "array") {
+      if (child instanceof Array) {
         var frag = this.lcesElement || jSh.docFrag();
         
         for (var i=0,l=child.length; i<l; i++) {
@@ -347,13 +401,12 @@ lces.rc[0] = function() {
         n.appendChild(child);
     }
     
-    
     var checkNSAttr = /^ns:[^:]+:[^]*$/i;
     
     if (attributes) {
       var attrs = Object.getOwnPropertyNames(attributes);
       
-      for (var i=0,l=attrs.length; i<l; i++) {
+      for (var i=attrs.length-1; i>-1; i--) {
         var attr = attrs[i];
         
         if (!checkNSAttr.test(attr) || jSh.MockupElement && n instanceof jSh.MockupElement)
@@ -370,7 +423,7 @@ lces.rc[0] = function() {
     if (properties) {
       var props = Object.getOwnPropertyNames(properties);
       
-      for (var i=0,l=props.length; i<l; i++) {
+      for (var i=props.length-1; i>-1; i--) {
         var prop = props[i];
         n[prop] = properties[prop];
       }
@@ -379,15 +432,18 @@ lces.rc[0] = function() {
     if (events) {
       var evts = Object.getOwnPropertyNames(events);
       
-      evts.forEach(function(i) {
-        if (jSh.type(evts[i]) === "array") {
-          events[i].forEach(function(j) {
-            n.addEventListener(i, j);
-          });
+      for (var i=evts.length-1; i>-1; i--) {
+        var evName = evts[i];
+        var evObj  = events[evName];
+        
+        if (evObj instanceof Array) {
+          for (var j=evObj.length-1; j>-1; j--) {
+            n.addEventListener(evName, evObj[j]);
+          }
         } else {
-          n.addEventListener(i, events[i]);
+          n.addEventListener(evName, evObj);
         }
-      });
+      }
     }
     
     return jSh(n);
@@ -400,12 +456,12 @@ lces.rc[0] = function() {
 
   // Create raw DOM element with no special features
   jSh.e = function(tag) {
-    var nsCheck = /^ns:[\w\d_]+:[^]+$/i.test(tag);
+    var nsCheck = tag.match(/^ns:([\w\d_]+):([^]+)$/i);
     if (!nsCheck) {
       return document.createElement(tag);
     } else {
-      var nsURI = tag.replace(/^ns:[\w\d_]+:([^]+)$/i, "$1");
-      var nsElm = tag.replace(/^ns:([\w\d_]+):[^]+$/i, "$1");
+      var nsElm = nsCheck[1];
+      var nsURI = nsCheck[2];
       
       var n = document.createElementNS(nsURI, nsElm);
       n.nsElm = true;
@@ -442,13 +498,13 @@ lces.rc[0] = function() {
   
   // DOM Manipulation Functions
 
-  jSh.getChild = function(off, length) {
-    var parent = typeof length === "object" ? length : this;
+  var getChild = jSh.getChild = function(off, length) {
+    var parent = length instanceof Object ? length : this;
     var children = jSh.toArr(parent.childNodes);
     var check = [];
     var ELM_NODE = Node.ELEMENT_NODE;
     
-    for (var i=children.length-1; i>=0; i--) {
+    for (var i=children.length-1; i>-1; i--) {
       var child = children[i];
       
       if (child.nodeType === ELM_NODE) {
@@ -472,7 +528,7 @@ lces.rc[0] = function() {
       return check[off];
   }
   
-  jSh.getParent = function(jump) {
+  var getParent = jSh.getParent = function(jump) {
     if (jSh.type(jump) !== "number" || jump < 0)
       return null;
     
@@ -503,7 +559,7 @@ lces.rc[0] = function() {
     return assert;
   }
 
-  jSh.onEvent = function(e, func, bubble) {
+  var onEvent = jSh.onEvent = function(e, func, bubble) {
     this.addEventListener(e, func, bubble);
   }
 
@@ -533,14 +589,14 @@ lces.rc[0] = function() {
     return e;
   }
   
-  jSh.setCSS = function(css) {
+  var setCSS = jSh.setCSS = function(css) {
     if (!css || jSh.type(css) !== "object")
       return this;
     
     var props = Object.getOwnPropertyNames(css);
     var style = this.style;
     
-    for (var i=0,l=props.length; i<l; i++) {
+    for (var i=props.length-1; i>-1; i--) {
       var propName = props[i];
       style[propName] = css[propName];
     }
@@ -548,7 +604,7 @@ lces.rc[0] = function() {
     return this;
   }
   
-  jSh.elementExt = {
+  var elementExt = jSh.elementExt = {
     appendChild: function() {
       var children = jSh.toArr(arguments);
       
@@ -562,10 +618,10 @@ lces.rc[0] = function() {
     removeChild: function() {
       var children = jSh.toArr(arguments);
       
-      if (jSh.type(children[0]) === "array")
+      if (children[0] instanceof Array)
         children = children[0];
       
-      for (var i=0,l=children.length; i<l; i++) {
+      for (var i=children.length-1; i>-1; i--) {
         this.__rmch(children[i]);
       }
       
@@ -575,53 +631,17 @@ lces.rc[0] = function() {
         return children;
     }
   }
-
-  jSh.id = function(id, parent) { // Compatible with MockupElement and normal # selection
-    return (jSh.MockupElement && parent instanceof jSh.MockupElement ? parent : (parent ? (parent.ownerDocument || parent) : document)).getElementById(id);
-  }
-  
-  jSh.class = function(c, parent) {
-    return jSh.toArr(parent.getElementsByClassName(c));
-  }
-  
-  jSh.tag = function(tag, parent) {
-    return jSh.toArr(parent.getElementsByTagName(tag));
-  }
-  
-  jSh.name = function(name) {
-    return jSh.toArr(document.getElementsByName(name));
-  }
-  
-  jSh.placeholder = function(ph, parent) {
-    return jSh.oneOrArr(jSh.toArr(parent.getElementsByTagName("lces-placeholder")).filter(function(i) {return i.phName && i.phName.toLowerCase() === ph.toLowerCase();}));
-  }
-  
-  jSh.queryAll = function(query, parent, first) {
-    return jSh.toArr(parent[first ? "querySelector" : "querySelectorAll"](query));
-  }
   
   // Determine selector in the string
-  jSh.isID    = /^#[^\s()\[\]*:{}]+$/i;
-  jSh.isClass = /^\.[^\s()\[\]*:{}]+$/i;
-  jSh.isTag   = /^[^\s()\[\]*:{}]+$/i;
-  jSh.isPH    = /^~[^\s()\[\]*:{}]+$/i; // LCES Templating, placeholder element
-  // If it doesn't pass any of these tests, then query selector is used.
-
-  jSh.determineSelector = function(str) {
-    if (typeof str === "number") {
-      return "getChild";
-    } else if (jSh.isID.test(str)) {
-      return "id";
-    } else if (jSh.isClass.test(str)) {
-      return "class";
-    } else if (jSh.isPH.test(str)) {
-      return "placeholder";
-    } else if (jSh.isTag.test(str)) {
-      return "tag";
-    } else { // Must be rocket science queries, back to queryselectAll...
-      return "queryAll";
-    }
-  }
+  jSh.isID    = /^#[\w-]+$/;
+  jSh.isClass = /^\.[a-zA-Z\d\-_]+$/;
+  jSh.isTag   = /^[a-zA-Z\d\-]+$/;
+  jSh.isPH    = /^~[a-zA-Z\d\-_]+$/; // LCES Templating, placeholder element
+  
+  var isID    = jSh.isID;
+  var isClass = jSh.isClass;
+  var isTag   = jSh.isTag;
+  var isPH    = jSh.isPH;
 
   // For distinguishing between lcWidget and a Node instance
   jSh.determineType = function(obj, jShDetermine) {

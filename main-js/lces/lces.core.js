@@ -979,7 +979,7 @@ lces.rc[2] = function() {
     addInit: function(func, priority) {
       priority = this.getInitPriority(priority);
       
-      if (jSh.type(func) !== "function")
+      if (typeof func !== "function")
         throw TypeError("LCES Init: Init Function isn't a function");
       
         priority.push(func);
@@ -997,7 +997,7 @@ lces.rc[2] = function() {
     insertInit: function(newFunc, oldFunc, priority) {
       priority = this.getInitPriority(priority);
       
-      if (jSh.type(newFunc) !== "function")
+      if (typeof newFunc !== "function")
         throw TypeError("LCES Init: Init function provided isn't a function");
       
       var index = priority.indexOf(oldFunc);
@@ -1009,7 +1009,7 @@ lces.rc[2] = function() {
     replaceInit: function(newFunc, oldFunc, priority) {
       priority = this.getInitPriority(priority);
       
-      if (jSh.type(newFunc) !== "function")
+      if (typeof newFunc !== "function")
         throw TypeError("LCES Init: Init function provided isn't a function");
       
       var index = priority.indexOf(func);
