@@ -203,7 +203,7 @@ if (!core && themify)
   getFile(LCPATH + "main-js/lces/lces.ui.themify.js");
 
 // Get core modules
-if (!init)
+if (!core)
   getFolder(LCPATH + "main-js/lces");
 
 // Get extra modules if any

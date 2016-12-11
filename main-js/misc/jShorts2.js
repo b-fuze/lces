@@ -67,38 +67,30 @@ lces.rc[0] = function() {
       
       // Shorten them
       if (result) {
-        if (result instanceof Array) {
-          for (var i=result.length-1; i>-1; i--) {
-            var elm = result[i];
-      
-            if (!elm.jSh) {
-              elm.getParent = getParent;
-              elm.getChild  = getChild;
-              elm.css       = setCSS;
-              elm.on        = onEvent;
-              elm.jSh       = jSh;
-      
-              // Improve append and removechild methods
-              elm.__apch = elm.appendChild;
-              elm.__rmch = elm.removeChild;
-      
-              elm.appendChild = jSh.elementExt.appendChild;
-              elm.removeChild = jSh.elementExt.removeChild;
-            }
+        var shortnedResult;
+        
+        if (result instanceof Array)
+          shortnedResult = result;
+        else
+          shortnedResult = [result];
+        
+        for (var i=result.length-1; i>-1; i--) {
+          var elm = result[i];
+    
+          if (!elm.jSh) {
+            elm.getParent = getParent;
+            elm.getChild  = getChild;
+            elm.css       = setCSS;
+            elm.on        = onEvent;
+            elm.jSh       = jSh;
+    
+            // Improve append and removechild methods
+            elm.__apch = elm.appendChild;
+            elm.__rmch = elm.removeChild;
+    
+            elm.appendChild = jSh.elementExt.appendChild;
+            elm.removeChild = jSh.elementExt.removeChild;
           }
-        } else if (!result.jSh) {
-          result.getParent = getParent;
-          result.getChild  = getChild;
-          result.css       = setCSS;
-          result.on        = onEvent;
-          result.jSh       = jSh;
-      
-          // Improve append and removechild methods
-          result.__apch = result.appendChild;
-          result.__rmch = result.removeChild;
-      
-          result.appendChild = elementExt.appendChild;
-          result.removeChild = elementExt.removeChild;
         }
       }
       
@@ -152,23 +144,23 @@ lces.rc[0] = function() {
   }
   
   jSh.pushItems = function(array) {
-    var items = jSh.toArr(arguments);
+    var items = jSh.toArr(arguments).slice(1);
     
-    items.forEach(function(i) {
-      array.push(i);
-    });
+    for (var i=0,l=items.length; i<l; i++) {
+      array.push(items[i]);
+    }
   }
   
   // Remove multiple items from an array
   jSh.spliceItem = function(array) {
     var items = jSh.toArr(arguments).slice(1);
     
-    items.forEach(function(i) {
-      var index = array.indexOf(i);
+    for (var i=0,l=items.length; i<l; i++) {
+      var index = array.indexOf(items[i]);
       
       if (index !== -1)
         array.splice(index, 1);
-    });
+    }
   }
 
   // Convert array-like object to an array

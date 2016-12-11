@@ -757,107 +757,93 @@ lces.rc[3] = function() {
     });
   }
 
-  lces.dynText.lexer = function(c, index, string, lexTypes) {
-    // Did we finish?
-    if (!c) {
-      if (this.tempToken)
-        this.pushToken();
+  lces.dynText.lexer = function(source /* c, index, string, lexTypes */) {
+    var lexTypes = this.lexerTypes;
+    
+    for (var cIndex=0,cMaxL=source.length; cIndex<cMaxL; cIndex++) {
+      var c = source[cIndex];
       
-      return false;
-    }
-    
-    
-    if (this.tempToken !== null) {
-      // Check if it's a property
-      if (this.tokenType === "property") {
-        if (c === "}") {
-          if (this.tempToken)
-            this.pushToken();
-          
-          this.tokenType = "text";
-          this.tempToken = null;
-          
-          return true;
-          
-        } else if (lexTypes.invalidPropChar(c)) {
-          if (!this.forgiving) {
-            var stringOff = index > 10 ? index - 5 : 0;
-            var stringEnd = index + 5;
-            var cursorOff = index - stringOff;
-            var string = string.substr(stringOff, stringEnd).replace("\n", " ");
-          
-            this.tokens  = "Invalid property character \"" + c + "\" at character index " + index +  " \n\n";
-            this.tokens += "\"" + string + "\" \n";
-            this.tokens += " " + (new Array(cursorOff < 0 ? 0 : cursorOff)).join(" ") + " ^";
-            
-            return false;
-          } else {
-            // Just make it a text token and move on
-            this.tokenType = "text";
-            
-            return true;
-          }
-        } else {
-          this.tempToken += c;
-          
-          return true;
-        }
+      // Did we finish?
+      if (!c) {
+        if (this.tempToken)
+          this.pushToken();
         
-        
-      // It's just text
-      } else {
-        // Escaping a character?
-        if (c === "\\") {
-          this.charIndex += 1;
-          this.tempToken += string[index + 1];
-          
-          return true;
-        
-        // Start of a property? Opening/Closing Bracket?
-      } else if (c === "{" || (c === "[" || c === "]") && this.allowTags) {
-          if (this.tempToken)
-            this.pushToken();
-          
-          this.tempToken = null;
-          
-          this.charIndex -= 1;
-          return true;
-        } else {
-          this.tempToken += c;
-          
-          return true;
-        }
+        return false;
       }
       
-      
-      // There's no active token
-    } else {
-      if (c === "{") {
-        this.tokenType = "property";
-        this.tempToken = "";
-        
-        return true;
-      } else if (c === "[" || c === "]") {
-        this.tokenType = c === "[" ? "open" : "close";
-        this.tempToken = null;
-        
-        if (this.tokenType === "open" && string[index + 1] === "/") {
-          this.charIndex += 1;
-          this.tokenType  = "closed";
+      if (this.tempToken !== null) {
+        // Check if it's a property
+        if (this.tokenType === "property") {
+          if (c === "}") {
+            if (this.tempToken)
+              this.pushToken();
+            
+            this.tokenType = "text";
+            this.tempToken = null;
+            
+          } else if (lexTypes.invalidPropChar(c)) {
+            if (!this.forgiving) {
+              var stringOff = cIndex > 10 ? cIndex - 5 : 0;
+              var stringEnd = cIndex + 5;
+              var cursorOff = cIndex - stringOff;
+              var string = source.substr(stringOff, stringEnd).replace("\n", " ");
+            
+              this.tokens  = "Invalid property character \"" + c + "\" at character index " + cIndex +  " \n\n";
+              this.tokens += "\"" + source + "\" \n";
+              this.tokens += " " + jSh.nChars(" ", cursorOff < 0 ? 0 : cursorOff) + " ^";
+              
+              return false;
+            } else {
+              // Just make it a text token and move on
+              this.tokenType = "text";
+            }
+          } else {
+            this.tempToken += c;
+          }
+          
+          
+        // It's just text
+        } else {
+          // Escaping a character?
+          if (c === "\\") {
+            cIndex += 1;
+            this.tempToken += source[cIndex + 1];
+            
+          // Start of a property? Opening/Closing Bracket?
+        } else if (c === "{" || (c === "[" || c === "]") && this.allowTags) {
+            if (this.tempToken)
+              this.pushToken();
+            
+            this.tempToken = null;
+            
+            cIndex -= 1;
+          } else {
+            this.tempToken += c;
+          }
         }
         
-        this.pushToken();
-        
-        return true;
+        // There's no active token
       } else {
-        this.tokenType = "text";
-        this.tempToken = c;
-        
-        return true;
+        if (c === "{") {
+          this.tokenType = "property";
+          this.tempToken = "";
+        } else if (c === "[" || c === "]") {
+          this.tokenType = c === "[" ? "open" : "close";
+          this.tempToken = null;
+          
+          if (this.tokenType === "open" && source[cIndex + 1] === "/") {
+            cIndex += 1;
+            this.tokenType = "closed";
+          }
+          
+          this.pushToken();
+        } else {
+          this.tokenType = "text";
+          this.tempToken = c;
+        }
       }
     }
   }
-
 
   // lces.dynText.processTokens(token, index, tokens)
   //
@@ -1118,12 +1104,16 @@ lces.rc[3] = function() {
         // Is it dynText'ivated?
         if (!curCtx.states[mainProp].dynTextContent) {
           curCtx.addStateListener(mainProp, function(value) {
-            if (!curCtx.states[mainProp].contentProps)
+            var contentProps = curCtx.states[mainProp].contentProps;
+            
+            if (!contentProps)
               return;
             
-            curCtx.states[mainProp].contentProps.forEach(function(i) {
-              i.element.innerHTML = lces.dynText.onContentChange(curCtx, i);
-            });
+            for (var i=0,l=contentProps.length; i<l; i++) {
+              var prop = contentProps[i];
+              
+              prop.element.innerHTML = lces.dynText.onContentChange(curCtx, prop);
+            }
             
             // Trigger dynProp change event
             component.triggerEvent("dynpropchange", {property: this.name});
@@ -1131,12 +1121,14 @@ lces.rc[3] = function() {
           
           // For 'special' instances
           curCtx.addStateListener(mainProp, function(value) {
-            if (!curCtx.states[mainProp].dynamicProps || jSh.type(cb) !== "function")
+            var dynamicProps = curCtx.states[mainProp].dynamicProps;
+            
+            if (!dynamicProps || typeof cb !== "function")
               return;
             
-            curCtx.states[mainProp].dynamicProps.forEach(function(i) {
-              lces.dynText.onDynamicChange(propBase, i);
-            });
+            for (var i=0,l=dynamicProps.length; i<l; i++) {
+              lces.dynText.onDynamicChange(propBase, dynamicProps[i]);
+            }
             
             // Trigger dynProp change event
             component.triggerEvent("dynpropchange", {property: this.name});
@@ -1195,9 +1187,11 @@ lces.rc[3] = function() {
               
               if (!propBase.states[i.name].dynTextParam)
                 propBase.addStateListener(i.name, function(value) {
-                  propBase.dynText.paramProps.forEach(function(k) {
-                    k.element.update(lces.dynText.onParamChange(propBase, k));
-                  });
+                  var paramProps = propBase.dynText.paramProps;
+                  
+                  for (var k=0,l=paramProps.length; k<l; k++) {
+                    paramProps[k].element.update(lces.dynText.onParamChange(propBase, paramProps[k]));
+                  }
                 });
               
               propBase.states[i.name].dynTextParam = true;
@@ -1211,10 +1205,11 @@ lces.rc[3] = function() {
       
       if (entity.children.length) {
         var CREBinded = CRE.bind(this);
+        var children  = entity.children;
         
-        entity.children.forEach(function(i) {
-          CREBinded(i);
-        });
+        for (var i=0,l=children.length; i<l; i++) {
+          CREBinded(children[i]);
+        }
       }
     }
     
@@ -1237,9 +1232,11 @@ lces.rc[3] = function() {
     this.entities.element = main;
     
     // Loop entities
-    this.entities.children.forEach(function(i, ind, arr) {
-      dynText.createRenderedEntities(i, cb);
-    });
+    var children = this.entities.children;
+    
+    for (var i=0,l=children.length; i<l; i++) {
+      dynText.createRenderedEntities(children[i], cb);
+    }
     
     return main;
   }
@@ -1273,18 +1270,16 @@ lces.rc[3] = function() {
     this.contentProps = [];
     this.paramProps   = [];
     
+    // Lexical analysis
+    this.lexer(s);
     
-    while (this.lexer(s[this.charIndex], this.charIndex, s, this.lexerTypes)) {
-      this.charIndex += 1;
-    }
-    
-    if (jSh.type(this.tokens) === "string")
+    if (typeof this.tokens === "string")
       throw Error(this.tokens);
     
     // Generate entities
     var entities = this.formatSyntax();
     
-    if (jSh.type(entities) === "string")
+    if (typeof entities === "string")
       throw Error(entities);
     
     // Render output

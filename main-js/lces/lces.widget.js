@@ -385,8 +385,8 @@ lces._WidgetInit = function() {
   // lces.initTagLoad is for loading lcWidgets from the DOM produced from the main HTML response from the server.
   // EDIT: Should be moved to lces.widget.js as it has nothing to do with the core LCES functions.
   lces.initTagLoad = function() {
-    var widgets  = jSh("[lces-widget]"); // Elements with lces-widget attribute
-    var widgets2 = jSh("lces-widget");   // lces-widget elements
+    var widgets  = jSh("[lces-name]"); // Elements with lces-widget attribute
+    var widgets2 = jSh("lces-widget"); // lces-widget elements
     
     // Combine the results
     widgets = widgets.concat(widgets2);
@@ -396,7 +396,7 @@ lces._WidgetInit = function() {
       var widget = widgets[i];
       var type   = "";
       
-      if (widget.tagName.toLowerCase() !== "lces-widget") {
+      if (widget.tagName !== "LCES-WIDGET") {
         var probableType = widget.getAttribute("lces-widget");
         var widgetName   = widget.getAttribute("lces-name");
         var widgetClass  = widget.getAttribute("lces-class");
