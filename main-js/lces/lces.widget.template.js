@@ -188,54 +188,59 @@ lces.rc[4] = function() {
         dynContext.dynText.allowTags = false;
       
       // Set the attributes
-      var checkNSAttr = /^ns:[^:]+:[^]*$/i;
+      var checkNSAttr   = /^ns:[^:]+:[^]*$/i;
+      var attributeList = Object.getOwnPropertyNames(this.attributes);
       
-      Object.getOwnPropertyNames(this.attributes).forEach(function(i) {
-        var isNS = checkNSAttr.test(i);
+      for (var i=0,l=attributeList.length; i<l; i++) {
+        var curAttr = attributeList[i];
+        var isNS    = checkNSAttr.test(curAttr);
         
-        var nsURI, nsAttr, oldI = i;
+        var nsURI, nsAttr, oldAttrForm = curAttr;
         
         if (isNS) {
-          nsURI = i.replace(/^ns:[^:]+:([^]*)$/i, "$1");
-          nsAttr = i.replace(/^ns:([^:]+):[^]*$/i, "$1");
+          nsURI  = curAttr.replace(/^ns:[^:]+:([^]*)$/i, "$1");
+          nsAttr = curAttr.replace(/^ns:([^:]+):[^]*$/i, "$1");
           
-          i = nsAttr;
+          curAttr = nsAttr;
         }
         
         if (dynContext) {
-          var dynAttr = dynContext.dynText.compile(that.attributes[oldI], function(s) {
+          var dynAttr = dynContext.dynText.compile(this.attributes[oldAttrForm], function(s) {
             if (!isNS)
-              newElm.setAttribute(i, s);
+              newElm.setAttribute(curAttr, s);
             else
               newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, s);
           });
           
           if (!dynAttr) {
             if (!isNS)
-              newElm.setAttribute(i, that.attributes[i]);
+              newElm.setAttribute(curAttr, this.attributes[curAttr]);
             else
-              newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, that.attributes[oldI]);
+              newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, this.attributes[oldAttrForm]);
           }
         } else {
           if (!isNS)
-            newElm.setAttribute(i, that.attributes[i]);
+            newElm.setAttribute(curAttr, this.attributes[curAttr]);
           else
-            newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, that.attributes[oldI]);
+            newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, this.attributes[oldAttrForm]);
         }
-      });
+      }
       
       // Add event listeners
-      Object.getOwnPropertyNames(this.__events).forEach(function(i) {
+      var eventList = Object.getOwnPropertyNames(this.__events);
+      
+      for (var i=eventList.length-1; i>=0; i--) {
+        var evtName = eventList[i];
+        var evt     = that.__events[evtName];
         var cb, bubble;
-        var evt = that.__events[i];
         
         for (var j=0; j<evt.length; j+=2) {
           cb     = evt[j];
           bubble = evt[j + 1];
           
-          newElm.addEventListener(i, cb, bubble);
+          newElm.addEventListener(evtName, cb, bubble);
         }
-      });
+      }
       
       // TODO: This is probably overly redundant
       if (this.getAttribute("style"))
@@ -246,7 +251,12 @@ lces.rc[4] = function() {
         dynContext.dynText.element = newElm;
         
         // Remove the innerHTML/textContent from the exclusion array
-        jSh.spliceItem(jSh.MockupElementOnlyProps, "innerHTML", "_innerHTML", "textContent", "_textContent");
+        jSh.extendObj(jSh.MockupElementOnlyPropsMap, { // FIXME: This is applied globally, which is stupid
+          "innerHTML": 0,
+          "_innerHTML": 0,
+          "textContent": 0,
+          "_textContent": 0
+        });
         
         if (this._textContent) {
           var textNode = jSh.c("span", undf, this._textContent);
@@ -257,13 +267,19 @@ lces.rc[4] = function() {
           
           newElm.appendChild(textNode);
           
-          jSh.pushItems(jSh.MockupElementOnlyProps, "textContent", "_textContent");
+          jSh.extendObj(jSh.MockupElementOnlyPropsMap, {
+            "textContent": 1,
+            "_textContent": 1
+          });
         } else if (this._innerHTML) {
           dynContext.dynText.allowTags = true;
           
           var c = dynContext.dynText.compile(this._innerHTML);
           
-          jSh.pushItems(jSh.MockupElementOnlyProps, "innerHTML", "_innerHTML");
+          jSh.extendObj(jSh.MockupElementOnlyPropsMap, {
+            "innerHTML": 1,
+            "_innerHTML": 1
+          });
         }
         
         dynContext.dynText.allowTags = false;
@@ -272,20 +288,30 @@ lces.rc[4] = function() {
       
       // Add own properties from initial MockupElement
       // TODO: Optimize this!!!!
-      var newProps = Object.getOwnPropertyNames(this).filter(function(i) {return jSh.MockupElementOnlyProps.indexOf(i) === -1;});
+      var jShMUpOnlyProps = jSh.MockupElementOnlyPropsMap;
+      var newPropNames    = Object.getOwnPropertyNames(this);
+      var newProps        = [];
+      
+      for (var i=0,l=newPropNames.length; i<l; i++) {
+        var newPropName = newPropNames[i];
+        
+        if (!jShMUpOnlyProps[newPropName])
+          newProps.push(newPropName);
+      }
       
       for (var i=0,l=newProps.length; i<l; i++) {
-        var prop = newProps[i];
+        var prop      = newProps[i];
+        var propValue = that[prop];
         
-        if (dynContext && jSh.type(that[prop]) === "string") {
-          var dyn = dynContext.dynText.compile(that[prop] + "", function(s) {
+        if (dynContext && typeof propValue === "string") {
+          var dyn = dynContext.dynText.compile(propValue + "", function(s) {
             newElm[prop] = s;
           });
           
           if (!dyn)
-            newElm[prop] = that[prop];
-        } else if (that[prop])
-          newElm[prop] = that[prop];
+            newElm[prop] = propValue;
+        } else if (propValue)
+          newElm[prop] = propValue;
       }
       
       // Finally add the classNames if any
@@ -298,11 +324,17 @@ lces.rc[4] = function() {
       
       // If deep is true, then traverse all the children
       if (deep) {
-        var method = clone ? "cloneNode" : "conceive";
+        var childNodes = this.childNodes;
         
-        this.childNodes.forEach(function(i) {
-          newElm.appendChild(i[method](true, dynContext));
-        });
+        if (clone) {
+          for (var i=0,l=childNodes.length; i<l; i++) {
+            newElm.appendChild(childNodes[i].cloneNode(true, dynContext));
+          }
+        } else {
+          for (var i=0,l=childNodes.length; i<l; i++) {
+            newElm.appendChild(childNodes[i].conceive(true, dynContext));
+          }
+        }
       }
       
       if (!clone && this.tagName.toLowerCase() === "lces-placeholder") {
@@ -518,23 +550,30 @@ lces.rc[4] = function() {
 
   jSh.MockupElementClassList = {
     manipulateClass: function(classn, add) {
-      if (!add && classn === undf) { // Remove all classnames
-        this.classes = [];
-        
-      } else if (jSh.type(classn) && classn.trim()) {
+      if (!add && classn === undefined) { // Remove all classnames
+        this.classes     = [];
+        this.classlookup = {};
+      } else if (typeof classn === "string" && classn.trim()) {
         var classes    = classn.split(/\s+/);
         var classArray = this.classes;
+        var classObj   = this.classlookup;
         
-        classes.forEach(function(i) {
-          var exists = classArray.indexOf(i);
+        for (var i=classes.length-1; i>=0; i--) {
+          var curClass = classes[i];
+          var exists   = !!classObj[curClass];
           
-          if (add && exists === -1 || !add && exists !== -1) {
-            if (add)
-              classArray.push(i);
-            else
-              classArray.splice(exists, 1);
+          if (add && !exists || !add && exists) {
+            if (add) {
+              classArray.push(curClass);
+              classObj[curClass] = true;
+            } else {
+              var curIndex = classArray.indexOf(curClass);
+              
+              classArray.splice(curIndex, 1);
+              classObj[curClass] = false;
+            }
           }
-        });
+        }
       }
     },
     add: function(classn) {
@@ -544,7 +583,7 @@ lces.rc[4] = function() {
       this.manipulateClass(classn, false);
     },
     contains: function(classn) {
-      return this.classes.indexOf(classn) !== -1;
+      return !!this.classlookup[classn];
     },
     toggle: function(classn) {
       if (this.contains(classn))
@@ -553,7 +592,7 @@ lces.rc[4] = function() {
         this.add(classn);
     }
   };
-
+  
   // Array of properties to NOT copy to the real element
   jSh.MockupElementOnlyProps = [];
   jSh.MockupElementOnlyProps = jSh.MockupElementOnlyProps.concat(Object.getOwnPropertyNames(jSh.MockupElementMethods));
@@ -562,9 +601,16 @@ lces.rc[4] = function() {
     "__events", "attributes", "jSh", "parentNode",
     "previousSibling", "nextSibling", "getChild",
     "on", "__privParentNode", "__apch", "__rmch",
-    "nodeType", "className"
+    "nodeType", "className",
+    
+    // For LCES logic mockup elements
+    "__lclogic"
   ]);
-
+  
+  // Assign to object for faster hash lookup
+  jSh.MockupElementOnlyPropsMap = {};
+  jSh.MockupElementOnlyProps.forEach(p => (jSh.MockupElementOnlyPropsMap[p] = 1));
+  
   // Elements that CANNOT contain children
   jSh.MockupElementsBarren = ["img", "input", "link", "meta"];
 
@@ -691,7 +737,7 @@ lces.rc[4] = function() {
     
     // Add classList functionality
     Object.defineProperty(this, "classList", {
-      value: jSh.extendObj({classes: [], element: this}, jSh.MockupElementClassList),
+      value: jSh.extendObj({classes: [], classlookup: {}, element: this}, jSh.MockupElementClassList),
       enumerable: true,
       configurable: false,
       writable: false
@@ -721,7 +767,6 @@ lces.rc[4] = function() {
   }
 
   jSh.MockupElement.prototype.constructor = jSh.MockupElement;
-
 
   // MockupText, similar to document.createTextNode
   jSh.__MockupTextConceive = function(d, dynContext) {
@@ -792,6 +837,39 @@ lces.rc[4] = function() {
     return jSh.MockupText(text);
   }
   
+  // LCES Templating Logic Elements
+  jSh.m = {};
+  
+  // jSh.m.if
+  //
+  // Will show elements if `condition` is true, will remove otherwise
+  jSh.m.if = function(condition) {
+    var element = jSh.cm("lces-template-if");
+    
+    element.__lclogic = "if";
+    return element;
+  }
+  
+  // jSh.m.array
+  //
+  // Loops an array
+  jSh.m.array = function(iterate, itemIdentifier) {
+    var element = jSh.cm("lces-template-array");
+    
+    element.__lclogic = "array";
+    return element;
+  }
+  
+  // jSh.m.times
+  //
+  // Renders the elements any number of times
+  jSh.m.times = function(count, countIdentifier) {
+    var element = jSh.cm("lces-template-times");
+    
+    element.__lclogic = "times";
+    return element;
+  }
+  
   // LCES Templating Placeholder element
   
   // Placeholder method for replacing it with a real node or MockupElement
@@ -839,18 +917,21 @@ lces.rc[4] = function() {
     
     this.type = "LCES Placeholder Widget";
     
-    this.replace = lces.template.__placeHolderReplace;
-    this.substitute = lces.template.__placeHolderSubstitute;
-    this.element.replace = lces.template.__placeHolderReplace.bind(this);
-    this.element.substitute = lces.template.__placeHolderSubstitute.bind(this);
+    this.element.replace = this.replace.bind(this);
+    this.element.substitute = this.substitute.bind(this);
     
     this.addStateListener("phName", function(phName) {
       that.element.setAttribute("ph-name", phName);
     });
   }
-
+  
   jSh.inherit(lcPlaceholder, lcWidget);
-
+  
+  jSh.extendObj(lcPlaceholder.prototype, {
+    replace: lces.template.__placeHolderReplace,
+    substitute: lces.template.__placeHolderSubstitute
+  });
+  
   // Create DOM placeholder element
   jSh.ph = function(phName) {
     var widget = new lcPlaceholder(jSh.c("lces-placeholder"));
