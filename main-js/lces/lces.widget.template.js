@@ -12,13 +12,13 @@ lces.rc[4] = function() {
     
     return template.build(options);
   }
-
+  
   // Template add initiation function method
   lces.template.addInit = function(func) {
     if (typeof func === "function")
       this.__initFuncs.push(func);
   }
-
+  
   // Template remove initiation function method
   lces.template.removeInit = function(func) {
     var index = this.__initFuncs.indexOf(func);
@@ -26,7 +26,710 @@ lces.rc[4] = function() {
     if (index !== -1)
       this.__initFuncs.splice(index, 1);
   }
-
+  
+  lces.template.tokenTypes = {
+    GROUP: 0, // Parens
+    REFERENCE: 1, // Variable reference
+    PRIMITIVE: 2, // String or number
+    MODIFIER: 3, // Addition, subtraction, etc
+    COMPARISON: 4 // Equality or greater/less than
+  };
+  
+  lces.template.expressionLexer = function(source) {
+    var tokenTypes = lces.template.tokenTypes;
+    
+    var mainTokens = [];
+    var tokens     = mainTokens;
+    
+    mainTokens.map   = {};
+    mainTokens.depth = [];
+    mainTokens.refs  = [];
+    
+    var isIdentifierStart = /[a-zA-Z_]/;
+    var isIdentifier      = /[a-zA-Z_\d\.\s]/;
+    var isNumberStart     = /\d/;
+    var isNumber          = /[\d\.]/;
+    var isCondOperator    = /[=<>]/;
+    var isGLTOperator     = /[><]/; // Greater/Less Than
+    var isMutOperator     = /[*\-+\/%]/;
+    var isStringStart     = /["']/;
+    
+    var char = "";
+    var curGroup = null;
+    var curToken = null;
+    var curTokenContent = null;
+    var inString = false;
+    var strQuote = '"';
+    var inIdentifier = false;
+    var finishIdentifierName = false;
+    
+    function checkValidValueToken(type, i) {
+      var lastToken = tokens[tokens.length - 1];
+      
+      if (lastToken instanceof Object) {
+        var lastTokenType = lastToken.type;
+        
+        // Confirm valid token order
+        switch (lastTokenType) {
+          case tokenTypes.PRIMITIVE:
+          case tokenTypes.GROUP:
+          case tokenTypes.REFERENCE:
+            throw new SyntaxError("LCES Template Expression: Unexpected " + type + " at col " + i);
+            break;
+        }
+      }
+    }
+    
+    function checkValidOperatorToken(type, i) {
+      var lastToken = tokens[tokens.length - 1];
+      
+      if (lastToken instanceof Object) {
+        var lastTokenType = lastToken.type;
+        
+        // Confirm valid token order
+        switch (lastTokenType) {
+          case tokenTypes.MODIFIER:
+          case tokenTypes.COMPARISON:
+            throw new SyntaxError("LCES Template Expression: Unexpected " + type + " at col " + i);
+            break;
+        }
+      } else {
+        throw new SyntaxError("LCES Template Expression: Unexpected " + type + " at col " + i);
+      }
+    }
+    
+    // Token ID for reference purposes
+    var curTokenID = 0;
+    var curDepth = -1;
+    
+    for (var i=0,l=source.length; i<l; i++) {
+      char = source[i];
+      
+      if (!inString) {
+        if (char === " ") {
+          // Do nothing in whitespace
+        } else if (isIdentifierStart.test(char)) {
+          checkValidValueToken("identifier", i);
+          
+          // Add identifier
+          curToken = [];
+          curTokenContent = "";
+          finishIdentifierName = false;
+          
+          while (isIdentifier.test(char) && char) {
+            if (char !== "." && char !== " ") {
+              if (finishIdentifierName)
+                throw new SyntaxError("LCES Template Expression: Unexpected token \"" + char + "\" at col " + i + " expected \".\"");
+              
+              inIdentifier = false;
+              curTokenContent += char;
+            } else if (char === " ") {
+              finishIdentifierName = true;
+              
+              curToken.push(curTokenContent);
+              curTokenContent = "";
+            } else {
+              if (!finishIdentifierName) {
+                curToken.push(curTokenContent);
+                curTokenContent = "";
+              }
+              
+              inIdentifier = true;
+              finishIdentifierName = false;
+            }
+            
+            i++;
+            char = source[i];
+          }
+          
+          if (inIdentifier)
+            throw new SyntaxError("LCES Template Expression: Unexpected token \"" + char + "\" at col " + i + " expected identifier");
+          
+          if (curTokenContent)
+            curToken.push(curTokenContent);
+          
+          var newReference = {
+            id: curTokenID,
+            type: tokenTypes.REFERENCE,
+            name: curToken,
+            nameStr: curToken.join("."),
+            value: null
+          };
+          
+          tokens.push(newReference);
+          mainTokens.refs.push(newReference);
+          curToken = null;
+          curTokenContent = null;
+          mainTokens.map[curTokenID] = newReference;
+          
+          curTokenID++;
+          
+          // Go back to previous char, since we're now on a char that's not
+          // part of the identifier
+          if (char)
+            i--;
+        } else if (isNumberStart.test(char)) {
+          checkValidValueToken("number", i);
+          
+          curTokenContent = "";
+          var passedDecimalPoint = false;
+          var numbersAfterDecimal = false;
+          
+          while (isNumber.test(char)) {
+            if (char === ".") {
+              if (passedDecimalPoint) {
+                throw new SyntaxError("LCES Template Expression: Unexpected token \"" + char + "\" at col " + i);
+              } else {
+                passedDecimalPoint = true;
+              }
+            } else if (passedDecimalPoint) {
+              // Make sure no erronous trailing periods
+              numbersAfterDecimal = true;
+            }
+            
+            curTokenContent += char;
+            
+            i++;
+            char = source[i];
+          }
+          
+          if (passedDecimalPoint && !numbersAfterDecimal)
+            throw new SyntaxError("LCES Template Expression: Unexpected token \"" + char + "\" at col " + i + " expected decimal numbers");
+          
+          tokens.push({
+            id: curTokenID,
+            type: tokenTypes.PRIMITIVE,
+            value: parseFloat(curTokenContent)
+          });
+          curToken = null;
+          curTokenContent = null;
+          
+          curTokenID++;
+          
+          // Go back to previous char, since we're now on a char that's not
+          // part of the number
+          if (char)
+            i--;
+        } else if (isStringStart.test(char)) {
+          checkValidValueToken("string", i);
+          
+          inString = true;
+          strQuote = char;
+          
+          curToken = [];
+          curTokenContent = "";
+        } else if (char === "(") {
+          checkValidValueToken("open paren", i);
+          
+          curGroup = {
+            id: curTokenID,
+            type: tokenTypes.GROUP,
+            value: [] // Tokens stored here
+          };
+          
+          mainTokens.map[curTokenID] = curGroup;
+          curTokenID++;
+          curDepth++;
+          
+          tokens.push(curGroup);
+          curGroup.value.parent = tokens;
+          
+          // Add to depth array
+          var curDepthArray = mainTokens.depth[curDepth];
+          
+          if (!curDepthArray) {
+            curDepthArray = [];
+            mainTokens.depth[curDepth] = curDepthArray;
+          }
+          
+          curDepthArray.push(curGroup);
+          
+          tokens = curGroup.value;
+        } else if (char === ")") {
+          checkValidOperatorToken("close paren", i); // Make sure no weird tokens ending it
+          
+          if (!tokens.parent || tokens.length === 1) {
+            throw new SyntaxError("LCES Template Expression: Unexpected closing paren \"" + char + "\" at col " + i);
+          } else {
+            tokens = tokens.parent;
+          }
+          
+          curDepth--;
+        } else if (isMutOperator.test(char)) {
+          checkValidOperatorToken(char, i);
+          
+          tokens.push({
+            id: curTokenID,
+            type: tokenTypes.MODIFIER,
+            value: char
+          });
+          
+          curTokenID++;
+          
+          curToken = null;
+          curTokenContent = null;
+        } else if (isCondOperator.test(char)) {
+          checkValidOperatorToken(char, i);
+          
+          var next   = source[i + 1];
+          var curCol = i;
+          
+          if (isGLTOperator.test(char) && next === "=") {
+            tokens.push({
+              id: curTokenID,
+              type: tokenTypes.COMPARISON,
+              value: char + "=",
+              col: curCol
+            });
+            
+            i++;
+          } else {
+            var extraChars = "";
+            
+            if (char === "=") {
+              var next  = source[i + 1];
+              var next2 = source[i + 2];
+              
+              if (next !== "=")
+                throw new SyntaxError("LCES Template Expression: Unexpected token \"" + next + "\" at col " + i + " expected \"=\"");
+              
+              if (next2 === "=") {
+                extraChars += "=";
+                i++;
+              }
+              
+              extraChars += "=";
+              i++;
+            }
+            
+            tokens.push({
+              id: curTokenID,
+              type: tokenTypes.COMPARISON,
+              value: char + extraChars,
+              col: curCol
+            });
+          }
+          
+          curToken = null;
+          curTokenContent = null;
+          
+          curTokenID++;
+        } else {
+          throw new SyntaxError("LCES Template Expression: Illegal character \"" + char + "\" at col " + i);
+        }
+      } else {
+        if (char === "\\") {
+          // Skip over next char
+          i += 1;
+          
+          curTokenContent += source[i];
+        } else if (char === strQuote) {
+          tokens.push({
+            id: curTokenID,
+            type: tokenTypes.PRIMITIVE,
+            value: curTokenContent
+          });
+          
+          curToken = null;
+          curTokenContent = null;
+          
+          curTokenID++;
+          inString = false;
+        } else {
+          curTokenContent += char;
+        }
+      }
+    }
+    
+    if (tokens !== mainTokens) {
+      throw new SyntaxError("LCES Template Expression: Unterminated parens in: `" + source + "`");
+    } else if (inString) {
+      throw new SyntaxError("LCES Template Expression: Unterminated string literal in: `" + source + "`");
+    }
+    
+    checkValidOperatorToken("termination of input", i); // Make sure no weird tokens ending it
+    
+    return mainTokens;
+  }
+  
+  lces.template.processTokens = function(tokens) {
+    var tree  = [];
+    var depth = tokens.depth;
+    var tokenTypes = lces.template.tokenTypes;
+    
+    var currentTokens = null;
+    var compareTree   = [];
+    var compareMap    = {};
+    
+    compareTree.map = tokens.map;
+    compareTree.groupMap = {};
+    
+    // Check for comparisons
+    for (var i=depth.length-1; i>=-1; i--) {
+      var groupDepth = depth[i];
+      var newDepth   = [];
+      
+      compareTree.push(newDepth);
+      
+      if (!groupDepth) {
+        // i must be -1, Reached the first group, ground zero i.e. not in a parens anymore
+        groupDepth = [{
+          value: tokens
+        }];
+      }
+      
+      for (var j=groupDepth.length-1; j>=0; j--) {
+        var group    = groupDepth[j];
+        var gTokens  = group.value;
+        var newGroup = {
+          sides: [[], []],
+          operator: null,
+          value: 0 // During evaluation phases
+        };
+        
+        if ("id" in group) {
+          newGroup.id = group.id;
+          compareMap[group.id] = newGroup;
+        } else {
+          newGroup.id = "zero";
+        }
+        
+        newDepth.push(newGroup);
+        
+        var lhs = newGroup.sides[0];
+        var rhs = newGroup.sides[1];
+        
+        var onRightSide     = false;
+        var compareOperator = null;
+        
+        for (var k=0,l=gTokens.length; k<l; k++) {
+          var token = gTokens[k];
+          
+          if (token.type === tokenTypes.COMPARISON) {
+            if (onRightSide)
+              throw new SyntaxError("LCES Template Expression: Unexpected token \"" + token.value + "\" at col " + token.col + ", multiple adjacent comparison operators aren't allowed");
+            
+            onRightSide     = true;
+            compareOperator = token.value;
+          } else {
+            if (onRightSide) {
+              rhs.push(token);
+            } else {
+              lhs.push(token);
+            }
+          }
+        }
+        
+        if (compareOperator)
+          newGroup.operator = compareOperator;
+      }
+      
+      newDepth.reverse();
+    }
+    
+    function opRank(char) {
+      return ["-", "+", "*", "%", "/"].indexOf(char);
+    }
+    
+    // Order and convert tokens to operations
+    for (var i=0,l=compareTree.length; i<l; i++) {
+      var curDepth = compareTree[i];
+      
+      for (var j=0,l2=curDepth.length; j<l2; j++) {
+        var curGroup = curDepth[j];
+        var sides    = curGroup.sides;
+        
+        var lhs = [];
+        var rhs = [];
+        
+        for (var k=0; k<sides.length; k++) {
+          var side = sides[k];
+          
+          var add = [];
+          var subtract = [];
+          var special = []; // Multiplication, division, modulo...
+          var lastOperation = "+";
+          var oldLastOperation = lastOperation;
+          var olderLastOperation = lastOperation;
+          var lastSign = 1;
+          var lastSpecial = null;
+          var curSpecial = null;
+          var lastToken = null;
+          var lastValueToken = null;
+          
+          function determineGroup(op) {
+            switch (op) {
+              case "+":
+                return add;
+                break;
+              case "-":
+                return subtract;
+                break;
+              default:
+                return lastSpecial;
+                break;
+            }
+          }
+          
+          for (var ii=0,l3=side.length; ii<l3; ii++) {
+            var token     = side[ii];
+            var nextToken = side[ii + 1];
+            
+            switch (token.type) {
+              case tokenTypes.GROUP:
+              case tokenTypes.REFERENCE:
+              case tokenTypes.PRIMITIVE:
+                // Not sure what to do here...
+                if (lastOperation === "*" ||
+                    lastOperation === "/" ||
+                    lastOperation === "%") {
+                  if (!nextToken || opRank(lastOperation) >= opRank(nextToken.value)) {
+                    if (token.type === tokenTypes.PRIMITIVE)
+                      lastSpecial.push(token.value);
+                    else
+                      lastSpecial.push({id: token.id, type: token.type}); // Group or reference
+                    
+                    lastValueToken = null;
+                  } else {
+                    lastValueToken = token;
+                  }
+                } else if (lastOperation === "+" ||
+                           lastOperation === "-") {
+                  var array = lastOperation === "+" ? add : subtract;
+                  
+                  if (!nextToken || opRank(lastOperation) >= opRank(nextToken.value) || nextToken.value === "+") {
+                    if (token.type === tokenTypes.PRIMITIVE)
+                      array.push(token.value);
+                    else
+                      array.push({id: token.id, type: token.type}); // Group or reference
+                    
+                    lastValueToken = null;
+                  } else {
+                    lastValueToken = token;
+                  }
+                  
+                } else {
+                  lastValueToken = token;
+                }
+                
+                break;
+              case tokenTypes.MODIFIER:
+                olderLastOperation = oldLastOperation;
+                oldLastOperation = lastOperation;
+                lastOperation = token.value;
+                
+                if (lastOperation === "-") {
+                  lastSign = -1;
+                } else if (lastOperation === "+") {
+                  lastSign = 1;
+                } else if (lastOperation === "*" ||
+                           lastOperation === "/" ||
+                           lastOperation === "%") {
+                  var prevOpHigher = opRank(oldLastOperation) > opRank(lastOperation);
+                  
+                  if ((lastOperation === oldLastOperation ||
+                      prevOpHigher)) {
+                    if (lastValueToken) {
+                      var opGroup = determineGroup(oldLastOperation);
+                      
+                      if (lastValueToken.type === tokenTypes.PRIMITIVE)
+                        opGroup.push(lastValueToken.value);
+                      else
+                        opGroup.push({id: lastValueToken.id, type: lastValueToken.type}); // Group or reference
+                      
+                      lastValueToken = null;
+                    }
+                    
+                    if (prevOpHigher && lastOperation !== "+" && lastOperation !== "-") {
+                      var lastSpecial = [lastOperation, lastSign, lastSpecial];
+                      var mergedWithLastSpecial = true;
+                    } else {
+                      var mergedWithLastSpecial = false;
+                    }
+                  } else {
+                    var lastSpecial = [lastOperation, lastSign];
+                    
+                    if (!prevOpHigher && lastValueToken) {
+                      if (lastValueToken.type === tokenTypes.PRIMITIVE)
+                        lastSpecial.push(lastValueToken.value);
+                      else
+                        lastSpecial.push({id: lastValueToken.id, type: lastValueToken.type}); // Group or reference
+                      lastValueToken = null;
+                    }
+                    
+                    var mergedWithLastSpecial = false;
+                  }
+                  
+                  if (mergedWithLastSpecial) {
+                    special[special.length - 1] = lastSpecial;
+                  } else if (lastOperation !== oldLastOperation) {
+                    special.push(lastSpecial);
+                  }
+                  
+                  lastSign = 1; // Since any following operations will likely be merged with this one
+                }
+                
+                break;
+            }
+            
+            lastToken = token;
+          }
+          
+          sides[k] = {
+            add: add,
+            subtract: subtract,
+            special: special
+          };
+        }
+      }
+    }
+    
+    // compareTree.reverse(); // No need to reverse
+    return compareTree;
+  }
+  
+  lces.template.parseExpression = function(expr) {
+    var tokens = lces.template.expressionLexer(expr);
+    
+    // Group and organize in tree/operation order
+    var compiledTokens = lces.template.processTokens(tokens);
+    
+    return compiledTokens;
+  }
+  
+  lces.template.evaluateExpression = function(compiledExpr, context, cache) {
+    var tokenTypes    = lces.template.tokenTypes;
+    var groupValueMap = {};
+    
+    function evalSpecial(special) {
+      var out  = null;
+      var op   = special[0];
+      var sign = special[1];
+      
+      for (var i=2,l=special.length; i<l; i++) {
+        var value     = special[i];
+        var realValue = 0;
+        
+        if (isNaN(value)) {
+          if (value instanceof Array) {
+            realValue = evalSpecial(value);
+          } else if (value.type === tokenTypes.GROUP) {
+            realValue = groupValueMap[value.id];
+          } else {
+            // It's a reference... TODO: FIX THIS....
+            realValue = 0;
+          }
+        } else {
+          realValue = value;
+        }
+        
+        if (out !== null) {
+          switch (op) {
+            case "*":
+              out *= realValue;
+              break;
+            case "%":
+              out %= realValue;
+              break;
+            case "/":
+              out /= realValue;
+              break;
+          }
+        } else {
+          out = realValue;
+        }
+      }
+      
+      return out * sign;
+    }
+    
+    for (var i=0,l=compiledExpr.length; i<l; i++) {
+      var depth = compiledExpr[i];
+      
+      for (var j=0,l2=depth.length; j<l2; j++) {
+        var group = depth[j];
+        
+        var outValue  = []; // Store value for each side
+        var operator  = group.operator;
+        var sideCount = operator ? 2 : 1;
+        
+        for (var k=0; k<sideCount; k++) {
+          var curSide  = group.sides[k];
+          var curValue = 0;
+          
+          var add      = curSide.add;
+          var subtract = curSide.subtract;
+          var special  = curSide.special;
+          
+          for (var ii=0,l3=add.length; ii<l3; ii++) {
+            var curTokenValue = add[ii];
+            
+            if (isNaN(curTokenValue)) {
+              if (curTokenValue.type === tokenTypes.GROUP) {
+                curTokenValue = groupValueMap[curTokenValue.id];
+              } else {
+                // It's a reference... TODO: FIX THIS....
+                curTokenValue = 0;
+              }
+            }
+            
+            curValue += curTokenValue;
+          }
+          
+          for (var ii=0,l3=subtract.length; ii<l3; ii++) {
+            var curTokenValue = subtract[ii];
+            
+            if (isNaN(curTokenValue)) {
+              if (curTokenValue.type === tokenTypes.GROUP) {
+                curTokenValue = groupValueMap[curTokenValue.id];
+              } else {
+                // It's a reference... TODO: FIX THIS....
+                curTokenValue = 0;
+              }
+            }
+            
+            curValue -= curTokenValue;
+          }
+          
+          for (var ii=0,l3=special.length; ii<l3; ii++) {
+            curValue += evalSpecial(special[ii]);
+          }
+          
+          outValue.push(curValue);
+        }
+        
+        if (operator) {
+          switch (operator) {
+            case "==":
+              group.value = outValue[0] == outValue[1];
+              break;
+            case "===":
+              group.value = outValue[0] === outValue[1];
+              break;
+            case ">=":
+              group.value = outValue[0] >= outValue[1];
+              break;
+            case "<=":
+              group.value = outValue[0] <= outValue[1];
+              break;
+            case ">":
+              group.value = outValue[0] > outValue[1];
+              break;
+            case "<":
+              group.value = outValue[0] < outValue[1];
+              break;
+          }
+        } else {
+          group.value = curValue;
+        }
+        
+        groupValueMap[group.id] = group.value;
+      }
+    }
+    
+    return groupValueMap["zero"];
+  }
+  
   // LCES Template Building method. Builds every LCES template constructor
   lces.template.build = function build(options) {
     
@@ -290,28 +993,24 @@ lces.rc[4] = function() {
       // TODO: Optimize this!!!!
       var jShMUpOnlyProps = jSh.MockupElementOnlyPropsMap;
       var newPropNames    = Object.getOwnPropertyNames(this);
-      var newProps        = [];
+      // var newProps        = [];
       
       for (var i=0,l=newPropNames.length; i<l; i++) {
         var newPropName = newPropNames[i];
         
-        if (!jShMUpOnlyProps[newPropName])
-          newProps.push(newPropName);
-      }
-      
-      for (var i=0,l=newProps.length; i<l; i++) {
-        var prop      = newProps[i];
-        var propValue = that[prop];
-        
-        if (dynContext && typeof propValue === "string") {
-          var dyn = dynContext.dynText.compile(propValue + "", function(s) {
-            newElm[prop] = s;
-          });
+        if (!jShMUpOnlyProps[newPropName]) {
+          var propValue = that[newPropName];
           
-          if (!dyn)
-            newElm[prop] = propValue;
-        } else if (propValue)
-          newElm[prop] = propValue;
+          if (dynContext && typeof propValue === "string") {
+            var dyn = dynContext.dynText.compile(propValue + "", function(s) {
+              newElm[newPropName] = s;
+            });
+            
+            if (!dyn)
+              newElm[newPropName] = propValue;
+          } else if (propValue)
+            newElm[newPropName] = propValue;
+        }
       }
       
       // Finally add the classNames if any
@@ -427,12 +1126,14 @@ lces.rc[4] = function() {
     traverse: function(e, cb) {
       var that = this;
       
-      e.childNodes.forEach(function(i) {
-        cb(i);
+      var children = e.childNodes;
+      
+      for (var i=0,l=children.length; i<l; i++) {
+        var child = children[i];
         
-        if (i.childNodes[0])
-          that.traverse(i, cb);
-      });
+        if (child.childNodes[0])
+          this.traverse(child, cb);
+      }
     },
     
     // Query selectors

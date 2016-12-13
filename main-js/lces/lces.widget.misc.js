@@ -763,14 +763,6 @@ lces.rc[3] = function() {
     for (var cIndex=0,cMaxL=source.length; cIndex<cMaxL; cIndex++) {
       var c = source[cIndex];
       
-      // Did we finish?
-      if (!c) {
-        if (this.tempToken)
-          this.pushToken();
-        
-        return false;
-      }
-      
       if (this.tempToken !== null) {
         // Check if it's a property
         if (this.tokenType === "property") {
@@ -843,6 +835,12 @@ lces.rc[3] = function() {
         }
       }
     }
+    
+    // Is there a last token?
+    if (this.tempToken)
+      this.pushToken();
+    
+    return false;
   }
 
   // lces.dynText.processTokens(token, index, tokens)
