@@ -505,7 +505,7 @@ So in essence, LCES is a sophisticated getter/setter system.
 LCES has two things, a component and it's states. A component can be anything, a car, box, cat, elephant, anything you want it to be. It's states are properties that are linked with **listeners** that are invoked on every little change. Let's make a cat component, then add a hungry state:
 
 ```javascript
-var cat = new lcComponent();
+var cat = lces.new();
 
 cat.setState("hungry", false);
 cat.addStateListener("hungry", function(value) {
@@ -524,7 +524,7 @@ Making custom component constructors is just like making any other constructor:
 
 ```Javascript
 function Cat(name) {
-  lcComponent.call(this); // Make an LCES component
+  lces.types.component.call(this); // Make an LCES component
   
   this.name = name; // Simple Object property
   var that  = this;
@@ -536,7 +536,7 @@ function Cat(name) {
 }
 
 // jSh (jShorts) is a separate library that LCES depends on
-jSh.inherit(Cat, lcComponent); // To inherit prototype chain
+jSh.inherit(Cat, lces.types.component); // To inherit prototype chain
 
 var kitty = new Cat("Socks");
 
