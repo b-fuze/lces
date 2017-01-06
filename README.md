@@ -530,7 +530,7 @@ function Cat(name) {
   var that  = this;
   
   this.setState("hungry", false); // LCES state
-  this.addStateListener("hungry", function(hungry) {
+  this.addStateListener("hungry", function(value) {
     console.log(that.name + " is" + (value ? " " : "n't ") + "hungry :O");
   });
 }
