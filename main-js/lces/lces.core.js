@@ -268,7 +268,7 @@ lces.rc[2] = function() {
       var stateObject = this.states[state];
       
       if (!stateObject) {
-        this.setState(state, undf);
+        this.setState(state, undefined);
         // console.warn(state + " doesn't exist"); // NOTICE: Removed for redundancy
         
         stateObject = this.states[state];
@@ -359,9 +359,9 @@ lces.rc[2] = function() {
           unlinkStates(state, linkedStates[i]);
       }
       
-      stateObj.component = undf;
+      stateObj.component = undefined;
       
-      this.states[state] = undf; // NOTICE: Used delete keyword FIX
+      this.states[state] = undefined; // NOTICE: Used delete keyword FIX
       delete this[state];        // TODO: FIX THIS
     },
     
@@ -429,8 +429,8 @@ lces.rc[2] = function() {
 
       this.removeStateListener("statechange", stateObj1.linkedStates[state2]);
       
-      stateObj1.linkedStates[state2] = undf;
-      stateObj2.linkedStates[state1] = undf;
+      stateObj1.linkedStates[state2] = undefined;
+      stateObj2.linkedStates[state1] = undefined;
 
       return true;
     },
@@ -509,14 +509,14 @@ lces.rc[2] = function() {
       if (!event || jSh.type(event) !== "string" || !this.events[event])
         return false;
       
-      this.events[event] = undf;
+      this.events[event] = undefined;
     },
     
     removeAllEvents: function() {
       var events = this.events;
       
       for (var i=0,l=events.length; i<l; i++) {
-        events[i] = undf;
+        events[i] = undefined;
       }
     },
     
@@ -852,7 +852,7 @@ lces.rc[2] = function() {
 
     var method = !args.method || args.method.toLowerCase().indexOf("get") != -1 ? "GET" : "POST";
 
-    xhr.open(method, (args.uri || args.url) + (method == "GET" ? (queryString ? "?" + queryString : "") : ""), args.async !== undf ? args.async : true);
+    xhr.open(method, (args.uri || args.url) + (method == "GET" ? (queryString ? "?" + queryString : "") : ""), args.async !== undefined ? args.async : true);
 
     if (args.form)
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -867,7 +867,7 @@ lces.rc[2] = function() {
         oldCookies.forEach(function(c) {document.cookie = c[0] + "=; expires=" + time + "; path=/"});
       }
       
-      xhr.send(method == "POST" ? queryString : undf);
+      xhr.send(method == "POST" ? queryString : undefined);
       
       if (args.cookies === false) { // Readd the cookies
         setTimeout(function(){ oldCookies.forEach(function(c) {document.cookie = c[0] + "=" + c[1] + "; expires=; path=/"}) }, 50);
@@ -926,13 +926,13 @@ lces.rc[2] = function() {
     
     var LCESName = component.LCESName;
     
-    LCESComponents[component.LCESID] = undf;
+    LCESComponents[component.LCESID] = undefined;
     component.removeAllGroupLinks();
     component.removeAllStates();
     component.removeAllEvents();
     
     if (LCESName && LCESComponents[LCESName] === component)
-      LCESComponents[LCESName] = undf;
+      LCESComponents[LCESName] = undefined;
   }
   
   // Initiation functions system

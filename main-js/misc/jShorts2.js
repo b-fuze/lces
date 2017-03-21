@@ -215,7 +215,7 @@ lces.rc[0] = function() {
           curProp.push.apply(curExtProp);
         else if (dontReplaceValues && curProp === undefined)
           curObj[i] = curExtProp;
-        else if (!dontReplaceObjects || jSh.type(curProp) !== "object" && (!dontReplaceValues || curProp === undf))
+        else if (!dontReplaceObjects || jSh.type(curProp) !== "object" && (!dontReplaceValues || curProp === undefined))
           curObj[i] = curExtProp;
       });
     }
@@ -480,7 +480,7 @@ lces.rc[0] = function() {
 
   // Create SVG with path nesting feature
   jSh.svg = function(classname, width, height, paths) {
-    return jSh.c("ns:svg:http://www.w3.org/2000/svg", classname, undf, paths, { // Attributes
+    return jSh.c("ns:svg:http://www.w3.org/2000/svg", classname, undefined, paths, { // Attributes
       "version": "1.1",
       "width": width,
       "height": height
@@ -489,7 +489,7 @@ lces.rc[0] = function() {
 
   // Create SVG path
   jSh.path = function(classname, points, style) {
-    return jSh.c("ns:path:http://www.w3.org/2000/svg", classname, undf, undf, {
+    return jSh.c("ns:path:http://www.w3.org/2000/svg", classname, undefined, undefined, {
       "ns:d:": points,
       "ns:style:": style || ""
     });
