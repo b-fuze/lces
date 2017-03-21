@@ -32,10 +32,11 @@ lces.rc[4] = function() {
     REFERENCE: 1, // Variable reference
     PRIMITIVE: 2, // String or number
     MODIFIER: 3, // Addition, subtraction, etc
-    COMPARISON: 4 // Equality or greater/less than
+    COMPARISON: 4, // Equality or greater/less than
+    BOOLEAN: 5 // Logical operators: && or ||
   };
   
-  lces.template.expressionLexer = function(source) {
+  lces.template.expressionLexer = function(source, options) {
     var tokenTypes = lces.template.tokenTypes;
     
     var mainTokens = [];
@@ -45,13 +46,15 @@ lces.rc[4] = function() {
     mainTokens.depth = [];
     mainTokens.refs  = [];
     
-    var isIdentifierStart = /[a-zA-Z_]/;
-    var isIdentifier      = /[a-zA-Z_\d\.\s]/;
+    var isIdentifierStart = /[a-zA-Z_$]/;
+    var isIdentifier      = /[a-zA-Z_\d\.\s$]/;
     var isNumberStart     = /\d/;
     var isNumber          = /[\d\.]/;
-    var isCondOperator    = /[=<>]/;
+    var isCondOperator    = /[=<>!]/;
     var isGLTOperator     = /[><]/; // Greater/Less Than
+    var isBoolOperator    = /[&|]/;
     var isMutOperator     = /[*\-+\/%]/;
+    var isUnaryOperator   = /[!-]/;
     var isStringStart     = /["']/;
     
     var char = "";
@@ -62,6 +65,14 @@ lces.rc[4] = function() {
     var strQuote = '"';
     var inIdentifier = false;
     var finishIdentifierName = false;
+    var negated = false;
+    var negatedLogical = false;
+    
+    function getLastTokenType() {
+      var lastToken = tokens[tokens.length - 1];
+      
+      return (lastToken || {}).type;
+    }
     
     function checkValidValueToken(type, i) {
       var lastToken = tokens[tokens.length - 1];
@@ -90,6 +101,7 @@ lces.rc[4] = function() {
         switch (lastTokenType) {
           case tokenTypes.MODIFIER:
           case tokenTypes.COMPARISON:
+          case tokenTypes.BOOLEAN:
             throw new SyntaxError("LCES Template Expression: Unexpected " + type + " at col " + i);
             break;
         }
@@ -100,7 +112,7 @@ lces.rc[4] = function() {
     
     // Token ID for reference purposes
     var curTokenID = 0;
-    var curDepth = -1;
+    var curDepth   = -1;
     
     for (var i=0,l=source.length; i<l; i++) {
       char = source[i];
@@ -109,6 +121,9 @@ lces.rc[4] = function() {
         if (char === " ") {
           // Do nothing in whitespace
         } else if (isIdentifierStart.test(char)) {
+          if (options.noReference)
+            throw new SyntaxError("LCES Template Expression: Reference variables disabled in expression. At col " + i);
+          
           checkValidValueToken("identifier", i);
           
           // Add identifier
@@ -148,12 +163,22 @@ lces.rc[4] = function() {
           if (curTokenContent)
             curToken.push(curTokenContent);
           
+          // `a.b` in `a.b.c`
+          var lastIndex = curToken.length - 1;
+          var ctxPath   = curToken.slice(0, lastIndex);
+          var varName   = curToken[lastIndex];
+          
           var newReference = {
             id: curTokenID,
             type: tokenTypes.REFERENCE,
             name: curToken,
             nameStr: curToken.join("."),
-            value: null
+            varName: varName,
+            context: ctxPath,
+            contextStr: ctxPath.join("."),
+            value: null,
+            negated: negated,
+            negatedLogical: negatedLogical
           };
           
           tokens.push(newReference);
@@ -168,7 +193,12 @@ lces.rc[4] = function() {
           // part of the identifier
           if (char)
             i--;
+          
+          negated = false;
         } else if (isNumberStart.test(char)) {
+          if (options.noNumbers)
+            throw new SyntaxError("LCES Template Expression: Number primitives disabled in expression. At col " + i);
+          
           checkValidValueToken("number", i);
           
           curTokenContent = "";
@@ -196,10 +226,16 @@ lces.rc[4] = function() {
           if (passedDecimalPoint && !numbersAfterDecimal)
             throw new SyntaxError("LCES Template Expression: Unexpected token \"" + char + "\" at col " + i + " expected decimal numbers");
           
+          var tokenValue = parseFloat(curTokenContent);
+          
+          if (negated) {
+            tokenValue *= -1;
+          }
+          
           tokens.push({
             id: curTokenID,
             type: tokenTypes.PRIMITIVE,
-            value: parseFloat(curTokenContent)
+            value: tokenValue
           });
           curToken = null;
           curTokenContent = null;
@@ -210,7 +246,12 @@ lces.rc[4] = function() {
           // part of the number
           if (char)
             i--;
+          
+          negated = false;
         } else if (isStringStart.test(char)) {
+          if (options.noStrings)
+            throw new SyntaxError("LCES Template Expression: String primitives disabled in expression. At col " + i);
+          
           checkValidValueToken("string", i);
           
           inString = true;
@@ -218,13 +259,15 @@ lces.rc[4] = function() {
           
           curToken = [];
           curTokenContent = "";
+          negated = false;
         } else if (char === "(") {
           checkValidValueToken("open paren", i);
           
           curGroup = {
             id: curTokenID,
             type: tokenTypes.GROUP,
-            value: [] // Tokens stored here
+            value: [], // Tokens stored here
+            negated: negated
           };
           
           mainTokens.map[curTokenID] = curGroup;
@@ -245,6 +288,7 @@ lces.rc[4] = function() {
           curDepthArray.push(curGroup);
           
           tokens = curGroup.value;
+          negated = false;
         } else if (char === ")") {
           checkValidOperatorToken("close paren", i); // Make sure no weird tokens ending it
           
@@ -255,7 +299,17 @@ lces.rc[4] = function() {
           }
           
           curDepth--;
+        } else if (isUnaryOperator.test(char) &&
+                  (getLastTokenType() === tokenTypes.MODIFIER ||
+                   getLastTokenType() === tokenTypes.COMPARISON ||
+                   getLastTokenType() === tokenTypes.BOOLEAN ||
+                   curTokenID === 0)) {
+          negated = true;
+          negatedLogical = char === "!";
         } else if (isMutOperator.test(char)) {
+          if (options.noArithmetic)
+            throw new SyntaxError("LCES Template Expression: Arithmetic operators disabled in expression. At col " + i);
+          
           checkValidOperatorToken(char, i);
           
           tokens.push({
@@ -269,6 +323,9 @@ lces.rc[4] = function() {
           curToken = null;
           curTokenContent = null;
         } else if (isCondOperator.test(char)) {
+          if (options.noCompare)
+            throw new SyntaxError("LCES Template Expression: Comparison operators disabled in expression. At col " + i);
+          
           checkValidOperatorToken(char, i);
           
           var next   = source[i + 1];
@@ -286,7 +343,7 @@ lces.rc[4] = function() {
           } else {
             var extraChars = "";
             
-            if (char === "=") {
+            if (char === "=" || char === "!") {
               var next  = source[i + 1];
               var next2 = source[i + 2];
               
@@ -313,6 +370,26 @@ lces.rc[4] = function() {
           curToken = null;
           curTokenContent = null;
           
+          curTokenID++;
+        } else if (isBoolOperator.test(char)) {
+          checkValidOperatorToken(char, i);
+          
+          var next = source[i + 1];
+          
+          if (next !== char)
+            throw new SyntaxError("LCES Template Expression: Unexpected token \"" + next + "\" at col " + i + " expected \"" + char + "\"");
+          
+          tokens.push({
+            id: curTokenID,
+            type: tokenTypes.BOOLEAN,
+            value: char + char,
+            col: curCol
+          });
+          
+          curToken = null;
+          curTokenContent = null;
+          
+          i += 1;
           curTokenID++;
         } else {
           throw new SyntaxError("LCES Template Expression: Illegal character \"" + char + "\" at col " + i);
@@ -361,8 +438,12 @@ lces.rc[4] = function() {
     var compareTree   = [];
     var compareMap    = {};
     
-    compareTree.map = tokens.map;
-    compareTree.groupMap = {};
+    compareTree.tokenMap   = tokens.map;
+    compareTree.groupMap   = {};
+    compareTree.references = []; // Variable references
+    compareTree.rawValue   = false;
+    
+    var overallTokenCount = 0;
     
     // Check for comparisons
     for (var i=depth.length-1; i>=-1; i--) {
@@ -382,9 +463,11 @@ lces.rc[4] = function() {
         var group    = groupDepth[j];
         var gTokens  = group.value;
         var newGroup = {
-          sides: [[], []],
-          operator: null,
-          value: 0 // During evaluation phases
+          sides: [[[], []]],
+          operator: [null],
+          bool: [null], // && or ||
+          value: 0, // During evaluation phases
+          negated: group.negated
         };
         
         if ("id" in group) {
@@ -396,39 +479,76 @@ lces.rc[4] = function() {
         
         newDepth.push(newGroup);
         
-        var lhs = newGroup.sides[0];
-        var rhs = newGroup.sides[1];
+        var curSides      = newGroup.sides[0];
+        var curSidesIndex = 0;
+        
+        var lhs = curSides[0];
+        var rhs = curSides[1];
         
         var onRightSide     = false;
         var compareOperator = null;
         
         for (var k=0,l=gTokens.length; k<l; k++) {
-          var token = gTokens[k];
+          var token         = gTokens[k];
+          var tokenIsString = false;
+          var tokenType     = token.type;
+          var valueType     = typeof token.value;
           
-          if (token.type === tokenTypes.COMPARISON) {
+          overallTokenCount++;
+          
+          if (tokenType === tokenTypes.BOOLEAN) {
+            onRightSide = false;
+            compareOperator = null;
+            
+            curSides = [[], []];
+            newGroup.sides.push(curSides);
+            newGroup.operator.push(null);
+            newGroup.bool.push(null);
+            newGroup.bool[curSidesIndex] = token.value;
+            
+            lhs = curSides[0];
+            rhs = curSides[1];
+            
+            curSidesIndex++;
+          } else if (tokenType === tokenTypes.COMPARISON) {
             if (onRightSide)
               throw new SyntaxError("LCES Template Expression: Unexpected token \"" + token.value + "\" at col " + token.col + ", multiple adjacent comparison operators aren't allowed");
             
             onRightSide     = true;
             compareOperator = token.value;
+            newGroup.operator[curSidesIndex] = compareOperator;
           } else {
+            switch (tokenType) {
+              case tokenTypes.PRIMITIVE:
+                if (valueType === "string")
+                  tokenIsString = true;
+                break;
+              case tokenTypes.REFERENCE:
+                compareTree.references.push(token);
+                break;
+            }
+            
             if (onRightSide) {
               rhs.push(token);
+              
+              if (tokenIsString)
+                rhs.string = true;
             } else {
               lhs.push(token);
+              
+              if (tokenIsString)
+                lhs.string = true;
             }
           }
         }
-        
-        if (compareOperator)
-          newGroup.operator = compareOperator;
       }
       
       newDepth.reverse();
     }
     
+    var opRankArr = ["-", "+", "*", "%", "/"];
     function opRank(char) {
-      return ["-", "+", "*", "%", "/"].indexOf(char);
+      return opRankArr.indexOf(char);
     }
     
     // Order and convert tokens to operations
@@ -437,297 +557,528 @@ lces.rc[4] = function() {
       
       for (var j=0,l2=curDepth.length; j<l2; j++) {
         var curGroup = curDepth[j];
-        var sides    = curGroup.sides;
+        var sidesArr = curGroup.sides;
         
-        var lhs = [];
-        var rhs = [];
-        
-        for (var k=0; k<sides.length; k++) {
-          var side = sides[k];
+        for (var jj=0,ll=sidesArr.length; jj<ll; jj++) {
+          var sides = sidesArr[jj];
           
-          var add = [];
-          var subtract = [];
-          var special = []; // Multiplication, division, modulo...
-          var lastOperation = "+";
-          var oldLastOperation = lastOperation;
-          var olderLastOperation = lastOperation;
-          var lastSign = 1;
-          var lastSpecial = null;
-          var curSpecial = null;
-          var lastToken = null;
-          var lastValueToken = null;
+          var lhs = [];
+          var rhs = [];
           
-          function determineGroup(op) {
-            switch (op) {
-              case "+":
-                return add;
-                break;
-              case "-":
-                return subtract;
-                break;
-              default:
-                return lastSpecial;
-                break;
-            }
-          }
-          
-          for (var ii=0,l3=side.length; ii<l3; ii++) {
-            var token     = side[ii];
-            var nextToken = side[ii + 1];
+          for (var k=0; k<sides.length; k++) {
+            var side = sides[k];
             
-            switch (token.type) {
-              case tokenTypes.GROUP:
-              case tokenTypes.REFERENCE:
-              case tokenTypes.PRIMITIVE:
-                // Not sure what to do here...
-                if (lastOperation === "*" ||
-                    lastOperation === "/" ||
-                    lastOperation === "%") {
-                  if (!nextToken || opRank(lastOperation) >= opRank(nextToken.value)) {
-                    if (token.type === tokenTypes.PRIMITIVE)
-                      lastSpecial.push(token.value);
-                    else
-                      lastSpecial.push({id: token.id, type: token.type}); // Group or reference
-                    
-                    lastValueToken = null;
-                  } else {
-                    lastValueToken = token;
-                  }
-                } else if (lastOperation === "+" ||
-                           lastOperation === "-") {
-                  var array = lastOperation === "+" ? add : subtract;
-                  
-                  if (!nextToken || opRank(lastOperation) >= opRank(nextToken.value) || nextToken.value === "+") {
-                    if (token.type === tokenTypes.PRIMITIVE)
-                      array.push(token.value);
-                    else
-                      array.push({id: token.id, type: token.type}); // Group or reference
-                    
-                    lastValueToken = null;
-                  } else {
-                    lastValueToken = token;
-                  }
-                  
-                } else {
-                  lastValueToken = token;
-                }
-                
-                break;
-              case tokenTypes.MODIFIER:
-                olderLastOperation = oldLastOperation;
-                oldLastOperation = lastOperation;
-                lastOperation = token.value;
-                
-                if (lastOperation === "-") {
-                  lastSign = -1;
-                } else if (lastOperation === "+") {
-                  lastSign = 1;
-                } else if (lastOperation === "*" ||
-                           lastOperation === "/" ||
-                           lastOperation === "%") {
-                  var prevOpHigher = opRank(oldLastOperation) > opRank(lastOperation);
-                  
-                  if ((lastOperation === oldLastOperation ||
-                      prevOpHigher)) {
-                    if (lastValueToken) {
-                      var opGroup = determineGroup(oldLastOperation);
-                      
-                      if (lastValueToken.type === tokenTypes.PRIMITIVE)
-                        opGroup.push(lastValueToken.value);
-                      else
-                        opGroup.push({id: lastValueToken.id, type: lastValueToken.type}); // Group or reference
-                      
-                      lastValueToken = null;
-                    }
-                    
-                    if (prevOpHigher && lastOperation !== "+" && lastOperation !== "-") {
-                      var lastSpecial = [lastOperation, lastSign, lastSpecial];
-                      var mergedWithLastSpecial = true;
-                    } else {
-                      var mergedWithLastSpecial = false;
-                    }
-                  } else {
-                    var lastSpecial = [lastOperation, lastSign];
-                    
-                    if (!prevOpHigher && lastValueToken) {
-                      if (lastValueToken.type === tokenTypes.PRIMITIVE)
-                        lastSpecial.push(lastValueToken.value);
-                      else
-                        lastSpecial.push({id: lastValueToken.id, type: lastValueToken.type}); // Group or reference
-                      lastValueToken = null;
-                    }
-                    
-                    var mergedWithLastSpecial = false;
-                  }
-                  
-                  if (mergedWithLastSpecial) {
-                    special[special.length - 1] = lastSpecial;
-                  } else if (lastOperation !== oldLastOperation) {
-                    special.push(lastSpecial);
-                  }
-                  
-                  lastSign = 1; // Since any following operations will likely be merged with this one
-                }
-                
-                break;
+            var add = [];
+            var subtract = [];
+            var special = []; // Multiplication, division, modulo...
+            var lastOperation = "+";
+            var oldLastOperation = lastOperation;
+            var olderLastOperation = lastOperation;
+            var oldLastMajorOperation = null;
+            var oldLastMajorAdditive = true;
+            var lastSign = 1;
+            var lastSpecial = null;
+            // var curSpecial = null; // FIXME: This might be useless
+            var lastToken = null;
+            var lastValueToken = null;
+            var lastMergedSpecial = null;
+            var swapNextToken = false; // Since the previous had a low value
+            
+            function determineGroup(op) {
+              switch (op) {
+                case "+":
+                  return add;
+                  break;
+                case "-":
+                  return subtract;
+                  break;
+                default:
+                  return lastSpecial;
+                  break;
+              }
             }
             
-            lastToken = token;
+            for (var ii=0,l3=side.length; ii<l3; ii++) {
+              var token     = side[ii];
+              var nextToken = side[ii + 1];
+              
+              switch (token.type) {
+                case tokenTypes.GROUP:
+                case tokenTypes.REFERENCE:
+                case tokenTypes.PRIMITIVE:
+                  switch (lastOperation) {
+                    case "*":
+                    case "/":
+                    case "%": {
+                      var higherOpValue = !nextToken || opRank(lastOperation) >= opRank(nextToken.value);
+                      
+                      if (!nextToken || higherOpValue) {
+                        if (token.type === tokenTypes.PRIMITIVE)
+                          lastSpecial.push(token.value);
+                        else
+                          lastSpecial.push({id: token.id, type: token.type, LCESValueType: true}); // Group or reference
+                        
+                        lastValueToken = null;
+                      } else {
+                        lastValueToken = token;
+                        
+                        if (!higherOpValue)
+                          swapNextToken = true;
+                      }
+                      
+                      break;
+                    }
+                    
+                    case "+":
+                    case "-": {
+                      var array = lastOperation === "+" ? add : subtract;
+                      
+                      if (!nextToken || opRank(lastOperation) >= opRank(nextToken.value) || nextToken.value === "+") {
+                        if (token.type === tokenTypes.PRIMITIVE)
+                          array.push(token.value);
+                        else
+                          array.push({id: token.id, type: token.type, LCESValueType: true}); // Group or reference
+                        
+                        lastValueToken = null;
+                      } else {
+                        lastValueToken = token;
+                      }
+                      
+                      break;
+                    }
+                    
+                    default: {
+                      lastValueToken = token;
+                    }
+                  }
+                  
+                  break;
+                case tokenTypes.MODIFIER:
+                  olderLastOperation = oldLastOperation;
+                  oldLastOperation = lastOperation;
+                  oldLastMajorOperation = special[special.length - 1];
+                  lastOperation = token.value;
+                  
+                  switch (lastOperation) {
+                    case "-": {
+                      lastSign = -1;
+                      oldLastMajorAdditive = true;
+                      break;
+                    }
+                    
+                    case "+": {
+                      lastSign = 1;
+                      oldLastMajorAdditive = true;
+                      break;
+                    }
+                    
+                    case "*":
+                    case "/":
+                    case "%": {
+                      var prevOpHigher = opRank(oldLastOperation) > opRank(lastOperation);
+                      var secondMergedWithLastSpecial = false;
+                      
+                      if ((lastOperation === oldLastOperation ||
+                          prevOpHigher)) {
+                        if (lastValueToken) {
+                          var opGroup = determineGroup(oldLastOperation);
+                          
+                          if (lastValueToken.type === tokenTypes.PRIMITIVE)
+                            opGroup.push(lastValueToken.value);
+                          else
+                            opGroup.push({id: lastValueToken.id, type: lastValueToken.type}); // Group or reference
+                          
+                          lastValueToken = null;
+                        }
+                        
+                        if (prevOpHigher && lastOperation !== "+" && lastOperation !== "-") {
+                          if (!oldLastMajorAdditive && oldLastOperation !== "+" && oldLastOperation !== "-" && oldLastMajorOperation && oldLastMajorOperation[0] === lastOperation) {
+                            secondMergedWithLastSpecial = true;
+                          } else {
+                            var lastSpecial = [lastOperation, lastSign, lastSpecial];
+                            var mergedWithLastSpecial = true;
+                          }
+                        } else {
+                          var mergedWithLastSpecial = false;
+                        }
+                      } else {
+                        var lastSpecial    = [lastOperation, lastSign];
+                        var oldLastSpecial = special[special.length - 1];
+                        
+                        if (lastValueToken) {
+                          if (lastValueToken.type === tokenTypes.PRIMITIVE)
+                            lastSpecial.push(lastValueToken.value);
+                          else
+                            lastSpecial.push({id: lastValueToken.id, type: lastValueToken.type}); // Group or reference
+                          lastValueToken = null;
+                        }
+                        
+                        if (!oldLastMajorAdditive && oldLastSpecial) {
+                          var oldLastSpecialOp = oldLastSpecial[0];
+                          
+                          if (opRank(oldLastSpecialOp) < opRank(lastOperation)) {
+                            secondMergedWithLastSpecial = true;
+                            oldLastSpecial.push(lastSpecial);
+                          }
+                        }
+                        
+                        var mergedWithLastSpecial = false;
+                      }
+                      
+                      if (!secondMergedWithLastSpecial) {
+                        if (mergedWithLastSpecial) {
+                          special[special.length - 1] = lastSpecial;
+                        } else if (lastOperation !== oldLastOperation) {
+                          special.push(lastSpecial);
+                        }
+                      }
+                      
+                      oldLastMajorAdditive = false;
+                      lastSign = 1; // Since any following operations will likely be merged with this one
+                      break;
+                    }
+                  }
+                  
+                  break;
+              }
+              
+              lastToken = token;
+            }
+            
+            sides[k] = {
+              add: add,
+              subtract: subtract,
+              special: special
+            };
           }
-          
-          sides[k] = {
-            add: add,
-            subtract: subtract,
-            special: special
-          };
         }
       }
     }
+    
+    if (overallTokenCount === 1 && compareTree.references.length)
+      compareTree.rawValue = true;
     
     // compareTree.reverse(); // No need to reverse
     return compareTree;
   }
   
-  lces.template.parseExpression = function(expr) {
-    var tokens = lces.template.expressionLexer(expr);
+  // parseExpression(String expr[, Object options])
+  //
+  // expr: String: Non-empty string of expression
+  // options: Optional. Object: Options to observe over the parsing phase
+  //
+  // Example `options`: (default values)
+  //  {
+  //    noStrings: false,
+  //    noNumbers: false,
+  //    noCompare: false, // Comparison operators: ===, !==, >, <, <=, etc
+  //    noArithmetic: false,
+  //    noReference: false
+  //  }
+  //
+  // Description: Parses expressions whilst observing options provided (if any)
+  //              and a structured tree that is fit evaluation in the Expression
+  //              Evaluator. @see `lces.template.evaluateExpression()`
+  lces.template.parseExpression = function(expr, options) {
+    if (typeof expr !== "string" || !expr.trim())
+      throw new Error("LCES Expression must be a valid non-empty string");
     
-    // Group and organize in tree/operation order
+    // Parse and tokenize expression
+    var tokens = lces.template.expressionLexer(expr, options || {});
+    
+    // Group and organize tokens in tree/operation order
     var compiledTokens = lces.template.processTokens(tokens);
     
     return compiledTokens;
   }
   
-  lces.template.evaluateExpression = function(compiledExpr, context, cache) {
-    var tokenTypes    = lces.template.tokenTypes;
-    var groupValueMap = {};
+  // Return variable reference values from {context}, e.g. `a.b` in: a.b * 5
+  function expressionLoadReferenceValue(reference, context, cache) {
+    var ctxStr  = reference.contextStr;
+    var varName = reference.varName;
+    var negated = reference.negated;
     
-    function evalSpecial(special) {
-      var out  = null;
-      var op   = special[0];
-      var sign = special[1];
+    if (!ctxStr) {
+      var value = context[varName];
       
-      for (var i=2,l=special.length; i<l; i++) {
-        var value     = special[i];
-        var realValue = 0;
-        
-        if (isNaN(value)) {
-          if (value instanceof Array) {
-            realValue = evalSpecial(value);
-          } else if (value.type === tokenTypes.GROUP) {
-            realValue = groupValueMap[value.id];
-          } else {
-            // It's a reference... TODO: FIX THIS....
-            realValue = 0;
-          }
+      if (negated) {
+        if (reference.negatedLogical) {
+          return !value;
         } else {
-          realValue = value;
+          switch (typeof value) {
+            case "number":
+              return value * -1;
+              break;
+            default:
+              return !value;
+          }
         }
-        
-        if (out !== null) {
-          switch (op) {
-            case "*":
-              out *= realValue;
-              break;
-            case "%":
-              out %= realValue;
-              break;
-            case "/":
-              out /= realValue;
-              break;
-          }
-        } else {
-          out = realValue;
+      } else {
+        return value;
+      }
+    }
+    
+    var ctx      = reference.context;
+    var path     = reference.name;
+    var pathStr  = reference.nameStr;
+    var cacheCtx = cache[ctxStr];
+    
+    if (cacheCtx) {
+      return cacheCtx[varName];
+    }
+    
+    var lastObject = context;
+    
+    for (var i=0,l=ctx.length; i<l; i++) {
+      try {
+        lastObject = lastObject[ctx];
+      } catch (e) {
+        throw new ReferenceError("LCES Expression Eval: Context object lacks sufficient depth");
+      }
+    }
+    
+    cache[ctxStr] = lastObject;
+    var value = lastObject[varName];
+    
+    if (negated) {
+      if (reference.negatedLogical) {
+        return !value;
+      } else {
+        switch (typeof value) {
+          case "number":
+            return value * -1;
+            break;
+          default:
+            return !value;
         }
       }
+    } else {
+      return value;
+    }
+  }
+  
+  // Evaluate * % / multiplication, modulo, division
+  function expressionEvalSpecial(special, context, cache) {
+    var out  = null;
+    var op   = special[0];
+    var sign = special[1];
+    
+    for (var i=2,l=special.length; i<l; i++) {
+      var value     = special[i];
+      var realValue = 0;
       
-      return out * sign;
+      if (isNaN(value)) {
+        if (value instanceof Array) {
+          realValue = expressionEvalSpecial(value, context, cache);
+        } else if (value.type === tokenTypes.GROUP) {
+          realValue = groupValueMap[value.id];
+        } else {
+          // It's a reference...
+          realValue = expressionLoadReferenceValue(tokenMap[value.id], context, cache);
+        }
+      } else {
+        realValue = value;
+      }
+      
+      if (out !== null) {
+        switch (op) {
+          case "*":
+            out *= realValue;
+            break;
+          case "%":
+            out %= realValue;
+            break;
+          case "/":
+            out /= realValue;
+            break;
+        }
+      } else {
+        out = realValue;
+      }
+    }
+    
+    return out * sign;
+  }
+  
+  lces.template.evaluateExpression = function(compiledExpr, context, cache) {
+    var tokenTypes    = lces.template.tokenTypes;
+    var tokenMap      = compiledExpr.tokenMap;
+    var groupValueMap = {};
+    var rawValue      = compiledExpr.rawValue;
+    
+    if (!context) {
+      context = {};
+    }
+    
+    if (!cache) {
+      cache = {};
     }
     
     for (var i=0,l=compiledExpr.length; i<l; i++) {
       var depth = compiledExpr[i];
       
+      depthLoop:
       for (var j=0,l2=depth.length; j<l2; j++) {
         var group = depth[j];
         
-        var outValue  = []; // Store value for each side
-        var operator  = group.operator;
-        var sideCount = operator ? 2 : 1;
+        var curSidesValues = [];
         
-        for (var k=0; k<sideCount; k++) {
-          var curSide  = group.sides[k];
-          var curValue = 0;
+        sidesLoop:
+        for (var jj=0,ll=group.sides.length; jj<ll; jj++) {
+          var outValue  = []; // Store value for each side
+          var operator  = group.operator[jj];
+          var sides     = group.sides[jj];
+          var sideCount = operator ? 2 : 1;
           
-          var add      = curSide.add;
-          var subtract = curSide.subtract;
-          var special  = curSide.special;
-          
-          for (var ii=0,l3=add.length; ii<l3; ii++) {
-            var curTokenValue = add[ii];
+          perSideLoop:
+          for (var k=0; k<sideCount; k++) {
+            var curSide = sides[k];
             
-            if (isNaN(curTokenValue)) {
-              if (curTokenValue.type === tokenTypes.GROUP) {
-                curTokenValue = groupValueMap[curTokenValue.id];
-              } else {
-                // It's a reference... TODO: FIX THIS....
-                curTokenValue = 0;
+            if (curSide.string)
+              var curValue = "";
+            else
+              var curValue = 0;
+            
+            var add      = curSide.add;
+            var subtract = curSide.subtract;
+            var special  = curSide.special;
+            
+            for (var ii=0,l3=add.length; ii<l3; ii++) {
+              var curTokenValue = add[ii];
+              
+              if (curTokenValue.LCESValueType) {
+                if (curTokenValue.type === tokenTypes.GROUP) {
+                  curTokenValue = groupValueMap[curTokenValue.id];
+                } else {
+                  // It's a reference...
+                  curTokenValue = expressionLoadReferenceValue(tokenMap[curTokenValue.id], context, cache);
+                }
               }
+              
+              if (!rawValue)
+                curValue += curTokenValue;
+              else
+                outValue = curTokenValue;
             }
             
-            curValue += curTokenValue;
-          }
-          
-          for (var ii=0,l3=subtract.length; ii<l3; ii++) {
-            var curTokenValue = subtract[ii];
-            
-            if (isNaN(curTokenValue)) {
-              if (curTokenValue.type === tokenTypes.GROUP) {
-                curTokenValue = groupValueMap[curTokenValue.id];
-              } else {
-                // It's a reference... TODO: FIX THIS....
-                curTokenValue = 0;
+            for (var ii=0,l3=subtract.length; ii<l3; ii++) {
+              var curTokenValue = subtract[ii];
+              
+              if (curTokenValue.LCESValueType) {
+                if (curTokenValue.type === tokenTypes.GROUP) {
+                  curTokenValue = groupValueMap[curTokenValue.id];
+                } else {
+                  // It's a reference...
+                  curTokenValue = expressionLoadReferenceValue(tokenMap[curTokenValue.id], context, cache);
+                }
               }
+              
+              curValue -= curTokenValue;
             }
             
-            curValue -= curTokenValue;
+            for (var ii=0,l3=special.length; ii<l3; ii++) {
+              curValue += expressionEvalSpecial(special[ii], context, cache);
+            }
+            
+            if (!rawValue)
+              outValue.push(curValue);
           }
           
-          for (var ii=0,l3=special.length; ii<l3; ii++) {
-            curValue += evalSpecial(special[ii]);
+          if (operator) {
+            switch (operator) {
+              case "==":
+                curSidesValues.push(outValue[0] == outValue[1]);
+                break;
+              case "===":
+                curSidesValues.push(outValue[0] === outValue[1]);
+                break;
+              case "!=":
+                curSidesValues.push(outValue[0] != outValue[1]);
+                break;
+              case "!==":
+                curSidesValues.push(outValue[0] !== outValue[1]);
+                break;
+              case ">=":
+                curSidesValues.push(outValue[0] >= outValue[1]);
+                break;
+              case "<=":
+                curSidesValues.push(outValue[0] <= outValue[1]);
+                break;
+              case ">":
+                curSidesValues.push(outValue[0] > outValue[1]);
+                break;
+              case "<":
+                curSidesValues.push(outValue[0] < outValue[1]);
+                break;
+            }
+          } else {
+            curSidesValues.push(curValue);
           }
-          
-          outValue.push(curValue);
         }
         
-        if (operator) {
-          switch (operator) {
-            case "==":
-              group.value = outValue[0] == outValue[1];
-              break;
-            case "===":
-              group.value = outValue[0] === outValue[1];
-              break;
-            case ">=":
-              group.value = outValue[0] >= outValue[1];
-              break;
-            case "<=":
-              group.value = outValue[0] <= outValue[1];
-              break;
-            case ">":
-              group.value = outValue[0] > outValue[1];
-              break;
-            case "<":
-              group.value = outValue[0] < outValue[1];
-              break;
-          }
+        if (curSidesValues.length === 1) {
+          // No boolean && or || operators in this group (yay)
+          group.value = curSidesValues[0];
         } else {
-          group.value = curValue;
+          // Ugh, got work to do
+          
+          var booleanResultSummary = true;
+          var boolOps = group.bool;
+          var continueBool = false;
+          var lastValue = curSidesValues[0];
+          // var lastResultSummary = 0;
+          
+          curSideValueLoop:
+          for (var i=0,l=curSidesValues.length - 1; i<l; i++) {
+            var curBool = boolOps[i];
+            
+            if (curBool === "&&") {
+              if (continueBool) {
+                // A chain of &&
+                var curBoolVal = curSidesValues[i];
+                
+                if (!curBoolVal) {
+                  booleanResultSummary = false;
+                  lastValue = curBoolVal;
+                } else if (i + 1 === l && !curSidesValues[i + 1]) {
+                  // The last value after this last && is false, result isn't truthy anymore
+                  booleanResultSummary = false;
+                  lastValue = curSidesValues[i + 1];
+                }
+                
+                if (booleanResultSummary)
+                  lastValue = curBoolVal;
+              } else {
+                booleanResultSummary = !!curSidesValues[i];
+                
+                if (booleanResultSummary)
+                  lastValue = curSidesValues[i + 1];
+                
+                continueBool = true;
+              }
+            } else {
+              continueBool = false;
+              
+              if (!lastValue)
+                lastValue = curSidesValues[i + 1];
+              else
+                break curSideValueLoop; // This value is positive, stop
+            }
+          }
+          
+          group.value = lastValue;
         }
         
         groupValueMap[group.id] = group.value;
       }
     }
     
-    return groupValueMap["zero"];
+    if (!rawValue)
+      return groupValueMap["zero"];
+    else {
+      groupValueMap["zero"] = outValue;
+      return outValue;
+    }
   }
   
   // LCES Template Building method. Builds every LCES template constructor
@@ -882,66 +1233,80 @@ lces.rc[4] = function() {
   jSh.MockupElementMethods = {
     // Conversion/Copying functions
     construct: function(deep, clone, dynContext) {
-      var that   = this;
-      var newElm = clone ? jSh.MockupElement(this.tagName) : jSh.e(this.tagName.toLowerCase());
-      var nsElm  = newElm.nsElm;
+      var that     = this;
+      var notLogic = !(!clone && this.__lclogic);
+      var newElm   = clone ? jSh.MockupElement(this.tagName) : jSh.e(this.tagName.toLowerCase());
+      var nsElm    = newElm.nsElm;
       
       // Disallow tags in the dynText compiling
       if (dynContext)
         dynContext.dynText.allowTags = false;
       
-      // Set the attributes
-      var checkNSAttr   = /^ns:[^:]+:[^]*$/i;
-      var attributeList = Object.getOwnPropertyNames(this.attributes);
-      
-      for (var i=0,l=attributeList.length; i<l; i++) {
-        var curAttr = attributeList[i];
-        var isNS    = checkNSAttr.test(curAttr);
+      // Make sure if we're conceiving it's not an lclogic element
+      if (notLogic) {
+        // Set the attributes
+        var checkNSAttr   = /^ns:[^:]+:[^]*$/i;
+        var attributeList = Object.getOwnPropertyNames(this.attributes);
         
-        var nsURI, nsAttr, oldAttrForm = curAttr;
-        
-        if (isNS) {
-          nsURI  = curAttr.replace(/^ns:[^:]+:([^]*)$/i, "$1");
-          nsAttr = curAttr.replace(/^ns:([^:]+):[^]*$/i, "$1");
+        for (var i=0,l=attributeList.length; i<l; i++) {
+          var curAttr = attributeList[i];
           
-          curAttr = nsAttr;
-        }
-        
-        if (dynContext) {
-          var dynAttr = dynContext.dynText.compile(this.attributes[oldAttrForm], function(s) {
-            if (!isNS)
-              newElm.setAttribute(curAttr, s);
-            else
-              newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, s);
-          });
+          if (curAttr === "dynClass")
+            continue;
           
-          if (!dynAttr) {
+          var isNS    = checkNSAttr.test(curAttr);
+          
+          var nsURI, nsAttr, oldAttrForm = curAttr;
+          
+          if (isNS) {
+            nsURI  = curAttr.replace(/^ns:[^:]+:([^]*)$/i, "$1");
+            nsAttr = curAttr.replace(/^ns:([^:]+):[^]*$/i, "$1");
+            
+            curAttr = nsAttr;
+          }
+          
+          if (dynContext) {
+            var dynAttr = dynContext.dynText.compile(this.attributes[oldAttrForm], function(s) {
+              if (!isNS)
+                newElm.setAttribute(curAttr, s);
+              else
+                newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, s);
+            }, dynContext);
+            
+            if (!dynAttr) {
+              if (!isNS)
+                newElm.setAttribute(curAttr, this.attributes[curAttr]);
+              else
+                newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, this.attributes[oldAttrForm]);
+            }
+          } else {
             if (!isNS)
               newElm.setAttribute(curAttr, this.attributes[curAttr]);
             else
               newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, this.attributes[oldAttrForm]);
           }
-        } else {
-          if (!isNS)
-            newElm.setAttribute(curAttr, this.attributes[curAttr]);
-          else
-            newElm.setAttributeNS(nsURI ? nsURI : null, nsAttr, this.attributes[oldAttrForm]);
         }
-      }
-      
-      // Add event listeners
-      var eventList = Object.getOwnPropertyNames(this.__events);
-      
-      for (var i=eventList.length-1; i>=0; i--) {
-        var evtName = eventList[i];
-        var evt     = that.__events[evtName];
-        var cb, bubble;
         
-        for (var j=0; j<evt.length; j+=2) {
-          cb     = evt[j];
-          bubble = evt[j + 1];
+        // Add event listeners
+        var eventList = Object.getOwnPropertyNames(this.__events);
+        
+        for (var i=eventList.length-1; i>=0; i--) {
+          var evtName = eventList[i];
+          var evt     = that.__events[evtName];
+          var cb, bubble;
           
-          newElm.addEventListener(evtName, cb, bubble);
+          for (var j=0; j<evt.length; j+=2) {
+            cb     = evt[j];
+            bubble = evt[j + 1];
+            
+            newElm.addEventListener(evtName, cb, bubble);
+          }
+        }
+        
+        if (dynContext) {
+          newElm.lces = {
+            ctx: dynContext
+          }
         }
       }
       
@@ -950,7 +1315,7 @@ lces.rc[4] = function() {
         newElm.setAttribute("style", this.getAttribute("style"));
         
       // Check innerHTML and textContent
-      if (dynContext) {
+      if (dynContext && notLogic) {
         dynContext.dynText.element = newElm;
         
         // Remove the innerHTML/textContent from the exclusion array
@@ -966,7 +1331,7 @@ lces.rc[4] = function() {
           
           var resC = dynContext.dynText.compile(this._textContent, function(s) {
             textNode.textContent = s;
-          });
+          }, dynContext);
           
           newElm.appendChild(textNode);
           
@@ -977,7 +1342,7 @@ lces.rc[4] = function() {
         } else if (this._innerHTML) {
           dynContext.dynText.allowTags = true;
           
-          var c = dynContext.dynText.compile(this._innerHTML);
+          var c = dynContext.dynText.compile(this._innerHTML, null, dynContext);
           
           jSh.extendObj(jSh.MockupElementOnlyPropsMap, {
             "innerHTML": 1,
@@ -989,36 +1354,178 @@ lces.rc[4] = function() {
         dynContext.dynText.element   = null;
       }
       
-      // Add own properties from initial MockupElement
-      // TODO: Optimize this!!!!
-      var jShMUpOnlyProps = jSh.MockupElementOnlyPropsMap;
-      var newPropNames    = Object.getOwnPropertyNames(this);
-      // var newProps        = [];
-      
-      for (var i=0,l=newPropNames.length; i<l; i++) {
-        var newPropName = newPropNames[i];
+      if (notLogic) {
+        // Add own properties from initial MockupElement
+        var jShMUpOnlyProps = jSh.MockupElementOnlyPropsMap;
+        var newPropNames    = Object.getOwnPropertyNames(this);
         
-        if (!jShMUpOnlyProps[newPropName]) {
-          var propValue = that[newPropName];
+        for (var i=0,l=newPropNames.length; i<l; i++) {
+          let newPropName = newPropNames[i];
           
-          if (dynContext && typeof propValue === "string") {
-            var dyn = dynContext.dynText.compile(propValue + "", function(s) {
-              newElm[newPropName] = s;
-            });
+          if (!jShMUpOnlyProps[newPropName]) {
+            let propValue = that[newPropName];
             
-            if (!dyn)
+            if (dynContext && typeof propValue === "string") {
+              let dyn = dynContext.dynText.compile(propValue + "", function(s) {
+                newElm[newPropName] = s;
+              }, dynContext);
+              
+              if (!dyn)
+                newElm[newPropName] = propValue;
+            } else if (propValue)
               newElm[newPropName] = propValue;
-          } else if (propValue)
-            newElm[newPropName] = propValue;
+          }
         }
-      }
-      
-      // Finally add the classNames if any
-      if (this.className) {
-        if (!nsElm)
-          newElm.className = this.className;
-        else
-          newElm.setAttribute("class", this.className);
+        
+        // Finally add the classNames if any
+        if (this.className) {
+          if (!nsElm)
+            newElm.className = this.className;
+          else
+            newElm.setAttribute("class", this.className);
+        }
+        
+        // Check for dynClass
+        if (!clone && dynContext) {
+          if (this.dynClass instanceof Object) {
+            var classExpressions = Object.getOwnPropertyNames(this.dynClass);
+            var classExprRefs = [];
+            var refCache = {};
+            var classStates = {};
+            
+            for (var i=0,l=classExpressions.length; i<l; i++) {
+              var curRawClassExpr = classExpressions[i];
+              
+              var classes = this.dynClass[curRawClassExpr].replace(/\s+/g, "").split(".").filter(function(c) {
+                return c;
+              });
+              
+              var curCompiledExpr = lces.template.parseExpression(curRawClassExpr);
+              var curClassExpr = {
+                rawExpr: curRawClassExpr,
+                expr: curCompiledExpr,
+                classes: classes
+              };
+              
+              for (var j=0,l2=classes.length; j<l2; j++) {
+                var className = classes[j];
+                var classObj  = classStates[className];
+                
+                if (!classObj) {
+                  classObj = classStates[className] = {};
+                  classObj.actualState = false;
+                  classObj.stateExpr = {};
+                  classObj.states = [];
+                }
+                
+                classObj.stateExpr[curRawClassExpr] = classObj.states.length;
+                classObj.states.push(false);
+              }
+              
+              for (var j=0,l2=curCompiledExpr.references.length; j<l2; j++) {
+                var ref = curCompiledExpr.references[j];
+                var refName = ref.nameStr;
+                var refObj = classExprRefs["ref" + refName];
+                
+                if (!refObj) {
+                  refObj = classExprRefs["ref" + refName] = {};
+                  refObj.expr = [];
+                  refObj.ref = ref;
+                  
+                  classExprRefs.push(refObj);
+                }
+                
+                refObj.expr.push(curClassExpr);
+              }
+            }
+            
+            function classDynTrigger(classExprRef, dynContext) {
+              var refObj = classExprRef;
+              
+              for (var j=0,l2=refObj.expr.length; j<l2; j++) {
+                var curExpr = refObj.expr[j];
+                var curExprRaw = curExpr.rawExpr;
+                var classes = curExpr.classes;
+                
+                var result = !!lces.template.evaluateExpression(curExpr.expr, dynContext);
+                for (var k=0,l3=classes.length; k<l3; k++) {
+                  var className = classes[k];
+                  var classObj = classStates[className];
+                  var classInd = classObj[curExprRaw];
+                  var curClassStates = classObj.states;
+                  
+                  curClassStates[classInd] = result;
+                  var setClass = result;
+                  
+                  if (!setClass) {
+                    for (var i=0,l=curClassStates.length; i<l; i++) {
+                      if (curClassStates[i]) {
+                        setClass = true;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  if (classObj.actualState !== setClass) {
+                    classObj.actualState = setClass;
+                    
+                    if (setClass) {
+                      newElm.classList.add(className);
+                    } else {
+                      newElm.classList.remove(className);
+                    }
+                  }
+                }
+              }
+            }
+            
+            function dynClassCallback(name) {
+              return function LCESDynClassCallback(value) {
+                var refObj = classExprRefs["ref" + name];
+                
+                classDynTrigger(refObj, this.component);
+              }
+            }
+            
+            // Add listeners to states
+            for (var i=0,l=classExprRefs.length; i<l; i++) {
+              var ref     = classExprRefs[i].ref;
+              var ctxStr  = ref.ctxStr;
+              var pathStr = ref.nameStr;
+              
+              if (!refCache[pathStr]) {
+                if (!ctxStr) {
+                    dynContext.addStateListener(pathStr, dynClassCallback(pathStr));
+                    refCache[pathStr] = dynContext;
+                } else {
+                  var varName = ref.varName;
+                  
+                  if (refCache[ctxStr]) {
+                    refCache[ctxStr].addStateListener(varName, dynClassCallback(pathStr));
+                  } else {
+                    var ctxPath = ref.context;
+                    var curObj  = dynContext;
+                    
+                    for (var j=0,l2=ctxPath.length; j<l2; j++) {
+                      curObj = curObj[ctxPath[j]];
+                      refCache[ctxPath.slice(0, j + 1).join(".")] = curObj;
+                    }
+                    
+                    curObj.addStateListener(varName, trigger);
+                    refCache[pathStr] = curObj;
+                  }
+                }
+              }
+              
+              // Try to initially update states
+              try {
+                classDynTrigger(classExprRefs[i], dynContext);
+              } catch(e) {
+                // Welp...
+              }
+            }
+          }
+        }
       }
       
       // If deep is true, then traverse all the children
@@ -1030,8 +1537,13 @@ lces.rc[4] = function() {
             newElm.appendChild(childNodes[i].cloneNode(true, dynContext));
           }
         } else {
-          for (var i=0,l=childNodes.length; i<l; i++) {
-            newElm.appendChild(childNodes[i].conceive(true, dynContext));
+          if (notLogic) {
+            for (var i=0,l=childNodes.length; i<l; i++) {
+              newElm.appendChild(childNodes[i].conceive(true, dynContext));
+            }
+          } else {
+            var logicMarker = document.createComment("  LCES LOGIC - " + this.__lclogic + (this.__lcexprStr ? ": " + this.__lcexprStr : "") + "  ");
+            this.__lcinit(logicMarker, newElm, childNodes, dynContext);
           }
         }
       }
@@ -1044,7 +1556,10 @@ lces.rc[4] = function() {
       }
       
       // End
-      return jSh(newElm);
+      if (notLogic)
+        return jSh(newElm, null, true);
+      else
+        return logicMarker;
     },
     
     // Return a full fledged DOM Node
@@ -1326,6 +1841,7 @@ lces.rc[4] = function() {
     
     // Set our fake nodeType
     this.nodeType = Node.ELEMENT_NODE;
+    this.isjShMockup = true;
     
     // Add the tagname
     Object.defineProperty(this, "tagName", {
@@ -1433,9 +1949,6 @@ lces.rc[4] = function() {
       writable: false
     });
     
-    // Add all the methods
-    jSh.extendObj(this, jSh.MockupElementMethods);
-    
     // Add classList functionality
     Object.defineProperty(this, "classList", {
       value: jSh.extendObj({classes: [], classlookup: {}, element: this}, jSh.MockupElementClassList),
@@ -1466,9 +1979,12 @@ lces.rc[4] = function() {
       }
     });
   }
-
+  
   jSh.MockupElement.prototype.constructor = jSh.MockupElement;
-
+  
+  // Add all the methods
+  jSh.extendObj(jSh.MockupElement.prototype, jSh.MockupElementMethods);
+  
   // MockupText, similar to document.createTextNode
   jSh.__MockupTextConceive = function(d, dynContext) {
     if (dynContext) {
@@ -1541,33 +2057,327 @@ lces.rc[4] = function() {
   // LCES Templating Logic Elements
   jSh.m = {};
   
+  lces.template.initIf = function(marker, newElm, childNodes, dynContext) {
+    // var anchor    = document.createComment();
+    var children   = [];
+    var logicNodes = [];
+    var refCache   = {};
+    var exprCache  = {};
+    var expr       = this.__lcexpr;
+    var refs       = expr.references;
+    var visible    = false;
+    
+    for (var i=0,l=childNodes.length; i<l; i++) {
+      var newChild = childNodes[i].conceive(true, dynContext);
+      children.push(newChild);
+      
+      if (newChild.LCESTrigger)
+        logicNodes.push(newChild);
+    }
+    
+    function trigger(change) {
+      if (!marker.parentNode)
+        return false;
+      
+      var result = !!lces.template.evaluateExpression(expr, dynContext, exprCache);
+      
+      if (result !== visible || change) {
+        if (result) {
+          var frag = jSh.docFrag();
+          
+          for (var i=0,l=children.length; i<l; i++) {
+            frag.appendChild(children[i]);
+          }
+          
+          if (marker.nextSibling) {
+            marker.parentNode.insertBefore(frag, marker.nextSibling);
+          } else {
+            marker.parentNode.appendChild(frag);
+          }
+          
+          // Trigger logic nodes
+          for (var i=0,l=logicNodes.length; i<l; i++) {
+            logicNodes[i].LCESInvisible(false);
+          }
+        } else {
+          var parent = marker.parentNode;
+          
+          if (children[0].parentNode) {
+            for (var i=0,l=children.length; i<l; i++) {
+              var child = children[i];
+              
+              // Check if logic is to be removed
+              if (child.LCESInvisible) {
+                child.LCESInvisible(true);
+              }
+              
+              parent.removeChild(child);
+            }
+          }
+        }
+        
+        visible = result;
+      }
+    }
+    
+    function invisible(notvisible) {
+      if (!notvisible) {
+        trigger(true);
+      } else {
+        if (visible) {
+          var parent = marker.parentNode;
+          
+          for (var i=0,l=children.length; i<l; i++) {
+            var child = children[i];
+            
+            if (child.LCESInvisible) {
+              child.LCESInvisible(false);
+            }
+            
+            parent.removeChild(child);
+          }
+        }
+      }
+    }
+    
+    marker.LCESTrigger = trigger;
+    marker.LCESInvisible = invisible;
+    
+    for (var i=0,l=refs.length; i<l; i++) {
+      var ref     = refs[i];
+      var ctxStr  = ref.ctxStr;
+      var pathStr = ref.nameStr;
+      
+      if (!refCache[pathStr]) {
+        if (!ctxStr) {
+            dynContext.addStateListener(pathStr, trigger);
+            refCache[pathStr] = dynContext;
+        } else {
+          var varName = ref.varName;
+          
+          if (refCache[ctxStr]) {
+            refCache[ctxStr].addStateListener(varName, trigger);
+          } else {
+            var ctxPath = ref.context;
+            var curObj  = dynContext;
+            
+            for (var j=0,l2=ctxPath.length; j<l2; j++) {
+              curObj = curObj[ctxPath[j]];
+              refCache[ctxPath.slice(0, j + 1).join(".")] = curObj;
+            }
+            
+            curObj.addStateListener(varName, trigger);
+            refCache[pathStr] = curObj;
+          }
+        }
+      }
+    }
+    
+    setTimeout(function() {
+      trigger(); // It's showtime baby!
+    }, 0);
+  }
+  
   // jSh.m.if
   //
   // Will show elements if `condition` is true, will remove otherwise
-  jSh.m.if = function(condition) {
-    var element = jSh.cm("lces-template-if");
+  jSh.m.if = function(condition, onChange, child) {
+    var element = jSh.cm("lces-template-if", null, null, child);
     
-    element.__lclogic = "if";
+    element.__lclogic   = "if";
+    element.__lcinit    = lces.template.initIf;
+    element.__lcexpr    = lces.template.parseExpression(condition);
+    element.__lcexprStr = condition;
+    
     return element;
+  }
+  
+  lces.template.initArray = function() {
+    
   }
   
   // jSh.m.array
   //
   // Loops an array
-  jSh.m.array = function(iterate, itemIdentifier) {
+  jSh.m.array = function(iterate, itemIdentifier, indexIdentifier, onAdd, onRemove) {
     var element = jSh.cm("lces-template-array");
     
-    element.__lclogic = "array";
+    element.__lclogic     = "array";
+    element.__lcitemName  = jSh.strOp(itemIdentifier, null) || "_item";
+    element.__lcindexName = jSh.strOp(indexIdentifier, null) || "_i";
+    element.__lcinit      = lces.template.initArray;
+    element.__lcexpr      = lces.template.parseExpression(iterate, {
+      noStrings: true,
+      noNumbers: true,
+      noCompare: true,
+      noArithmetic: true
+    });
+    element.__lcexprStr = iterate;
+    
     return element;
+  }
+  
+  lces.template.initTimes = function(marker, newElm, childNodes, dynContext) {
+    // var anchor    = document.createComment();
+    var children  = [];
+    var refCache  = {};
+    var exprCache = {};
+    var expr      = this.__lcexpr;
+    var refs      = expr.references;
+    var count     = 0;
+    var rendering = false;
+    var countName = this.__lccountName;
+    var initTimes = false;
+    
+    var noAutoStateObj = jSh.extendObj(Object.create(dynContext._noAutoState), {[countName]: 1});
+    
+    function trigger(change) {
+      if (!marker.parentNode || rendering)
+        return;
+      
+      rendering = true;
+      var result = parseInt(lces.template.evaluateExpression(expr, dynContext, exprCache));
+      
+      if (result !== count) {
+        if (result > count) {
+          var frag = jSh.docFrag();
+          var diff = result - count;
+          var last = children[children.length - 1];
+          
+          for (var i=0; i<diff; i++) {
+            for (var j=0,l=childNodes.length; j<l; j++) {
+              var newContext = Object.create(dynContext); // Create new inhereting context
+              newContext._noAutoState = noAutoStateObj;
+              newContext[countName] = count + i + 1;
+              
+              var child = childNodes[j].conceive(true, newContext);
+              
+              frag.appendChild(child);
+              children.push(child);
+            }
+          }
+          
+          var lastNode = count !== 0 ? last : marker;
+          
+          if (lastNode.nextSibling) {
+            marker.parentNode.insertBefore(frag, lastNode.nextSibling);
+          } else {
+            marker.parentNode.appendChild(frag);
+          }
+        } else {
+          var parent     = marker.parentNode;
+          var start      = (childNodes.length * result);
+          var childCount = children.length;
+          
+          if (start >= 0 && childCount) {
+            for (var i=start; i<childCount; i++) {
+              parent.removeChild(children[i]);
+            }
+          }
+          
+          children = children.slice(0, start);
+        }
+        
+        count = result;
+      }
+      
+      rendering = false;
+      initTimes = true;
+    }
+    
+    function invisible(notvisible) {
+      if (!notvisible) { // Visible
+        if (!initTimes)  {
+          trigger();
+        } else {
+          var parent = marker.parentNode;
+          var frag   = jSh.docFrag();
+          
+          for (var i=0,l=children.length; i<l; i++) {
+            var child = children[i];
+            
+            frag.appendChild(child);
+            
+            if (child.LCESInvisible) {
+              child.LCESInvisible(false);
+            }
+          }
+          
+          if (marker.nextSibling) {
+            parent.insertBefore(frag, marker.nextSibling);
+          } else {
+            parent.appendChild(frag);
+          }
+        }
+      } else {
+        var parent = marker.parentNode;
+        
+        for (var i=0,l=children.length; i<l; i++) {
+          var child = children[i];
+          
+          if (child.LCESInvisible) {
+            child.LCESInvisible(true);
+          }
+          
+          parent.removeChild(child);
+        }
+      }
+    }
+    
+    marker.LCESTrigger   = trigger;
+    marker.LCESInvisible = invisible;
+    
+    for (var i=0,l=refs.length; i<l; i++) {
+      var ref     = refs[i];
+      var ctxStr  = ref.ctxStr;
+      var pathStr = ref.nameStr;
+      
+      if (!refCache[pathStr]) {
+        if (!ctxStr) {
+            dynContext.addStateListener(pathStr, trigger);
+            refCache[pathStr] = dynContext;
+        } else {
+          var varName = ref.varName;
+          
+          if (refCache[ctxStr]) {
+            refCache[ctxStr].addStateListener(varName, trigger);
+          } else {
+            var ctxPath = ref.context;
+            var curObj  = dynContext;
+            
+            for (var j=0,l2=ctxPath.length; j<l2; j++) {
+              curObj = curObj[ctxPath[j]];
+              refCache[ctxPath.slice(0, j + 1).join(".")] = curObj;
+            }
+            
+            curObj.addStateListener(varName, trigger);
+            refCache[pathStr] = curObj;
+          }
+        }
+      }
+    }
+    
+    setTimeout(function() {
+      trigger(); // It's showtime baby!
+    }, 0);
   }
   
   // jSh.m.times
   //
   // Renders the elements any number of times
-  jSh.m.times = function(count, countIdentifier) {
-    var element = jSh.cm("lces-template-times");
+  jSh.m.times = function(count, countIdentifier, child, onAdd, onRemove) {
+    var element = jSh.cm("lces-template-times", null, null, child);
     
-    element.__lclogic = "times";
+    element.__lclogic     = "times";
+    element.__lccountName = jSh.strOp(countIdentifier, null) || "_c";
+    element.__lccurCount  = 0;
+    element.__lcinit      = lces.template.initTimes;
+    element.__lcexpr      = lces.template.parseExpression(count, {
+      noStrings: true,
+      noCompare: true
+    });
+    element.__lcexprStr = count;
+    
     return element;
   }
   

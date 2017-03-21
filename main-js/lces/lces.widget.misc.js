@@ -1016,7 +1016,7 @@ lces.rc[3] = function() {
       parent: null
     };
     
-    this.entities = main;
+    this.entities   = main;
     this.tempEntity = main;
     
     while (this.processTokens(this.tokens[this.tokenIndex], this.tokenIndex, this.tokens)) {
@@ -1086,7 +1086,12 @@ lces.rc[3] = function() {
           entity.parent.element.appendChild(entity.element);
         }
         
-        var curCtx = this.getContext(prop.name);
+        var curCtx    = this.getContext(prop.name);
+        var isNotAuto = this.context._noAutoState[mainProp];
+        
+        if (isNotAuto) {
+          prop.context = this.context;
+        }
         
         // Does the property/state exist?
         var existed = false, oldValue;
@@ -1247,7 +1252,7 @@ lces.rc[3] = function() {
   // Description: Compiles the first argument string provided into dynText's so-called "entities"
   //   that are then made into DOM elements (If .allowTags isn't falsy). Otherwise they are just
   //   preserved for their order and calls the callback provided instead.
-  lces.dynText.compile = function(s, cb) {
+  lces.dynText.compile = function(s, cb, context) {
     if (!s || typeof s !== "string")
       return false;
     
@@ -1267,6 +1272,10 @@ lces.rc[3] = function() {
     this.handlers     = jSh.extendObj({}, this.handlers);
     this.contentProps = [];
     this.paramProps   = [];
+    
+    if (context) {
+      this.context = context;
+    }
     
     // Lexical analysis
     this.lexer(s);
@@ -1302,6 +1311,10 @@ lces.rc[3] = function() {
         mainElement.removeChild(jSh.toArr(mainElement.childNodes));
       
       mainElement.appendChild(mainFrag);
+    }
+    
+    if (context) {
+      this.context = this.component;
     }
     
     // If checking for dyn links, then they exist

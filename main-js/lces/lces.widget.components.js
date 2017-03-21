@@ -33,8 +33,7 @@ lces.rc[5] = function() {
       });
       this.linkStates("text", "value");
     }
-
-
+    
     this.setState("focused", false);
     lces.focus.addMember(this);
     
@@ -95,7 +94,6 @@ lces.rc[5] = function() {
     scrubbar.addEventListener("mousedown", function(e) {
       e.preventDefault();
       var target = e.target || e.srcElement;
-      console.log(e.clientX);
       
       // Focus scrubbar
       that.element.focus();
@@ -105,21 +103,21 @@ lces.rc[5] = function() {
       scrubberWidth = scrubber.offsetWidth;
       
       var onScrub = function(e, scrubberTrig) {
+        e.preventDefault();
         var sbRect = scrubbar.getBoundingClientRect();
         
         that.triggerEvent("scrubberX", {
           scrubberTriggered: !scrubberTrig,
           x: e.clientX - sbRect.left - scrubberWidth * 0.5
         });
-        
-        e.preventDefault();
       }
       
       onScrub(e, !(target === scrubber));
       that.classList.add("scrubbing");
       
       window.addEventListener("mousemove", onScrub);
-      window.addEventListener("mouseup", function() {
+      window.addEventListener("mouseup", function(e) {
+        e.preventDefault();
         window.removeEventListener("mousemove", onScrub);
         
         that.classList.remove("scrubbing");
@@ -364,6 +362,24 @@ lces.rc[5] = function() {
       return req;
     }
     
+    var lcesph    = jSh.ph ? jSh.ph() : null;
+    var resetForm = jSh.c("form");
+    
+    this.reset = function() {
+      if (lcesph)
+        lcesph.substitute(input);
+      
+      resetForm.appendChild(input);
+      resetForm.reset();
+      
+      if (lcesph)
+        lcesph.replace(input);
+      else
+        that.element.appendChild(input);
+      
+      textDisplay.textContent = "No file chosen";
+    }
+    
     input.addEventListener("change", this.onchange);
   }
   
@@ -492,15 +508,22 @@ lces.rc[5] = function() {
     }
     
     this.addEventListener("keydown", function(e) {
+      if (e.ctrlKey)
+        return;
+      
       if (acceptableKeyCodes[e.keyCode.toString()] === undf)
         return e.preventDefault();
       
-      if (e.keyCode == 38)
-        that.increment();
-      if (e.keyCode == 40)
-        that.decrement();
+      switch (e.keyCode) {
+        case 38:
+          that.increment();
+          break;
+        case 40:
+          that.decrement();
+          break;
+      }
       
-      return true;
+      return;
     });
     
     // Check for properties in the attributes

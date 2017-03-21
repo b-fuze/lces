@@ -395,6 +395,7 @@ input.lces.lces-numberfield {
 
 .lces-colorchooser {
   position: relative;
+  z-index: 5;
   top: -3px;
   vertical-align: middle;
   display: inline-block;
@@ -682,6 +683,7 @@ input.lces.lces-numberfield {
   height: 34px;
   border-radius: 5px;
   overflow: hidden;
+  vertical-align: middle;
   
   user-select: none;
   -webkit-user-select: none; /* Chrome/Safari */

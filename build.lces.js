@@ -196,7 +196,7 @@ function uglify(src) {
 
 // Get core files
 getFile(LCPATH + "main-js/misc/jShorts2.js");
-if (!init)
+if (!core)
   getFile(LCPATH + "main-js/misc/css.essentials.js");
 getFile(LCPATH + "main-js/lces/lces.core.js");
 if (!core && themify)

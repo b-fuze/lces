@@ -59,10 +59,11 @@ lces.rc[2] = function() {
     // If noReference is on then it just appends null
     if (!lces.noReference)
       LCES.components.push(this);
-
+      
     this.states = {};
     this.extensionData = []; // Data for extensions
-
+    this._noAutoState = {}; // To prevent auto state converting LCES utility from converting normal properties to states
+    
     // Check if needs to add methods manually
     if (!(this instanceof lcComponent)) {
       jSh.extendObj(this, lcComponent.prototype);
@@ -136,7 +137,7 @@ lces.rc[2] = function() {
     if (!stateObj || !stateObj.flippedStateCall) {
       _setState(state, stateStatus, recurring);
       
-      var stateObj  = states[state];
+      stateObj = states[state];
       
       if (stateObj.oldStateStatus !== stateObj.stateStatus) {
         if (!statechange.states[state])
@@ -183,6 +184,7 @@ lces.rc[2] = function() {
           data: {},
           private: false, // If true then data links (lcGroup) can't change it.
           flippedStateCall: false,
+          profile: null,
           linkedStates: {} // {state: "state", func: func}
         };
         
@@ -191,7 +193,13 @@ lces.rc[2] = function() {
 
         Object.defineProperty(this, state, {configurable: true, set: function(stateStatus) { that.setState(state, stateStatus); }, get: function() { return that.getState(state); }});
       }
-
+      
+      // Check for profiling flag
+      var canProfile = stateObject.profile;
+      if (canProfile) {
+        console.time(canProfile);
+      }
+      
       var stateCond   = stateObject.conditions;
       var canContinue = true;
       
@@ -211,9 +219,14 @@ lces.rc[2] = function() {
       // Set from proposedValue
       stateStatus = stateObject.proposedValue;
       
-      if (stateObject.stateStatus === stateStatus && !recurring)
+      if (stateObject.stateStatus === stateStatus && !recurring) {
+        if (canProfile) {
+          console.timeEnd(canProfile);
+        }
+        
         return false;
-
+      }
+      
       // If we're here then everything seems to be okay and we can move on.
       // Set the state.
       stateObject.oldStateStatus = stateObject.stateStatus;
@@ -228,7 +241,12 @@ lces.rc[2] = function() {
         if (func)
           func.call(stateObject, stateStatus, recurring);
       }
-
+      
+      // Check for profiling flag
+      if (canProfile) {
+        console.timeEnd(canProfile);
+      }
+      
       return true;
     },
 
@@ -361,15 +379,14 @@ lces.rc[2] = function() {
       var that = this;
       if (!this.states[state1])
         this.setState(state1, "");
-
+      
       if (!this.states[state2])
         this.setState(state2, "");
-
+      
       // First check if they're already linked.
       if (this.states[state1].linkedStates[state2] || this.states[state2].linkedStates[state1])
         this.unlinkStates(state1, state2);
-
-
+      
       function listener(state) {
         var callback = listener.callback;
         var state1   = listener.state1;
@@ -421,12 +438,12 @@ lces.rc[2] = function() {
     hardLinkStates: function(state1, state2) { // State1 will be considered nonexistant.. And if it exists it'll be deleted.
       if (!this.states[state2])
         throw ReferenceError("No such state");
-
+      
       if (this.states[state1])
         removeState(state1);
       
       var that = this;
-
+      
       this.states[state1] = this.states[state2];
       Object.defineProperty(this, state1, {configurable: true, set: function(stateStatus) { that.setState(state1, stateStatus); }, get: function() { return that.getState(state1); } });
     },
@@ -437,7 +454,6 @@ lces.rc[2] = function() {
       if (this.states[state2])
         this.removeState(state2);
       
-      
       this.setState(state2, null);
       
       // NOTICE: Object.create(o) isn't supported in IE8!!! But ofc, Idc.
@@ -445,23 +461,37 @@ lces.rc[2] = function() {
       var newStateObj = Object.create(this.states[state1]);
       this.states[state2] = newStateObj;
     },
-
+    
     extend: function(component) { // TODO: Check this, it might be useless
       var args = [];
       for (var i=1,l=arguments.length; i<l; i++) {
         args.push(arguments[i]);
       }
-
+      
       var data = {
         component: this
       };
       this.extensionData.push(data);
-
+      
       component.apply(this, args.concat([data, LCES.EXTENDED_COMPONENT]));
     },
-
+    
     dataSetState: function(state, stateStatus, recurring) {
       this._setState(state, stateStatus, recurring);
+    },
+    
+    profileState: function(state, profileName) {
+      var stateObj = this.states[state];
+      
+      if (!stateObj) {
+        throw new ReferenceError("LCESComponent.protoype.profileState: state `" + state + "` doesn't exist");
+      }
+      
+      if (typeof profileName !== "string" || !profileName) {
+        throw new TypeError("LCESComponent.protoype.profileState: profileName needs to be a populated string");
+      }
+      
+      stateObj.profile = profileName;
     },
     
     // Event system

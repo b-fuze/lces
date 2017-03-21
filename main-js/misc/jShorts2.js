@@ -29,7 +29,7 @@ lces.rc[0] = function() {
     });
 
   // Main DOM Manipulation function
-  lces.global.jSh = function jSh(src, first) {
+  lces.global.jSh = function jSh(src, first, test) {
     var parent, doc, result;
     
     if (typeof src === "string") {
@@ -67,27 +67,27 @@ lces.rc[0] = function() {
       
       // Shorten them
       if (result) {
-        var shortnedResult;
+        var shortenedResult;
         
         if (result instanceof Array)
-          shortnedResult = result;
+          shortenedResult = result;
         else
-          shortnedResult = [result];
+          shortenedResult = [result];
         
-        for (var i=result.length-1; i>-1; i--) {
-          var elm = result[i];
-    
+        for (var i=shortenedResult.length-1; i>=0; i--) {
+          var elm = shortenedResult[i];
+          
           if (!elm.jSh) {
             elm.getParent = getParent;
             elm.getChild  = getChild;
             elm.css       = setCSS;
             elm.on        = onEvent;
             elm.jSh       = jSh;
-    
+            
             // Improve append and removechild methods
             elm.__apch = elm.appendChild;
             elm.__rmch = elm.removeChild;
-    
+            
             elm.appendChild = jSh.elementExt.appendChild;
             elm.removeChild = jSh.elementExt.removeChild;
           }
@@ -213,7 +213,7 @@ lces.rc[0] = function() {
           merge(curProp, curExtProp);
         else if (dontReplaceArrays && jSh.type(curProp) === "array" && jSh.type(curExtProp) === "array")
           curProp.push.apply(curExtProp);
-        else if (dontReplaceValues && curProp === undf)
+        else if (dontReplaceValues && curProp === undefined)
           curObj[i] = curExtProp;
         else if (!dontReplaceObjects || jSh.type(curProp) !== "object" && (!dontReplaceValues || curProp === undf))
           curObj[i] = curExtProp;
@@ -298,7 +298,7 @@ lces.rc[0] = function() {
 
   // Create HTML DOM Div elements with a flexible nesting system
   jSh.d = function node(className, text, child, attributes, properties, events) { // For creating an element
-    var nsElm, elmClassName; // For things like SVG... Ugggh. :|
+    var nsElm, elmClassName, isMockup, dynClass; // For things like SVG... Ugggh. :|
     
     if (!this.lcesElement) {
       // Check if we need to make an element with a custom namespace URI
@@ -319,6 +319,9 @@ lces.rc[0] = function() {
     } else {
       // Element is already provided
       var n = this.lcesElement;
+      
+      if (n.isjShMockup)
+        isMockup = true;
     }
     
     // Check if the args provided are all enclosed in an object
@@ -331,8 +334,14 @@ lces.rc[0] = function() {
       attributes   = args.attributes || args.attr;
       properties   = args.properties || args.prop || args.props;
       events       = args.events;
+      
+      if (isMockup)
+        dynClass = args.dynClass;
     } else {
       elmClassName = className;
+      
+      if (isMockup && attributes)
+        dynClass = attributes.dynClass;
     }
     
     // Check for an arguments availability and apply it if detected
@@ -368,7 +377,6 @@ lces.rc[0] = function() {
           attributes["class"] = elmClassName;
       }
     }
-    
     
     if (id)
       n.id = id[1];
@@ -438,7 +446,10 @@ lces.rc[0] = function() {
       }
     }
     
-    return jSh(n);
+    if (isMockup && dynClass instanceof Object)
+      n.dynClass = dynClass;
+    
+    return jSh.shorten(n);
   };
 
   // Create a 'type' DOM element with flexible nesting system
@@ -600,18 +611,22 @@ lces.rc[0] = function() {
     appendChild: function() {
       var children = jSh.toArr(arguments);
       
-      if (jSh.type(children[0]) === "array")
+      if (children[0] instanceof Array)
         children = children[0];
       
       for (var i=0,l=children.length; i<l; i++) {
         this.__apch(children[i]);
       }
     },
+    
     removeChild: function() {
       var children = jSh.toArr(arguments);
       
       if (children[0] instanceof Array)
         children = children[0];
+      
+      if (typeof this.__rmch !== "function")
+        console.log({x: this}, this.__rmch, this.__apch);
       
       for (var i=children.length-1; i>-1; i--) {
         this.__rmch(children[i]);
@@ -625,7 +640,7 @@ lces.rc[0] = function() {
   }
   
   // Determine selector in the string
-  jSh.isID    = /^#[\w-]+$/;
+  jSh.isID    = /^#[\w\-]+$/;
   jSh.isClass = /^\.[a-zA-Z\d\-_]+$/;
   jSh.isTag   = /^[a-zA-Z\d\-]+$/;
   jSh.isPH    = /^~[a-zA-Z\d\-_]+$/; // LCES Templating, placeholder element

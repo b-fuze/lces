@@ -398,7 +398,6 @@ lces.rc[6] = function() {
       
       var color = lces.ui.RGB2HSV(that.getValueArray()[0] / 255, that.getValueArray()[1] / 255, that.getValueArray()[2] / 255);
       
-      console.log(value, this.component.min, this.component.max);
       that.setCursor(color.h, value / 100);
       that.updateColorValue();
     });

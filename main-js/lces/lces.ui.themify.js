@@ -52,7 +52,7 @@ lces.themify = {
 };
 
 lces.themify.colorize.compile = function compile() {
-  var styles = Array.prototype.slice.call(document.getElementsByClassName("lces-ui-colorize-src"));
+  var styles = jSh.toArr(document.getElementsByClassName("lces-ui-colorize-src"));
   
   styles.forEach(function(st) {
     st.lcesColorizeSrc = st.childNodes[0].nodeValue;

@@ -150,10 +150,17 @@ lces._WidgetInit = function() {
 
     this.setState("text", "");
     this.addStateListener("text", function(text) {
-      if (that.element.tagName.toLowerCase() !== "input") {
-        that.element.textContent = text;
-      } else
-        that.element.value = text;
+      var element = that.element;
+      
+      switch (element.tagName.toLowerCase()) {
+        case "input":
+        case "textarea":
+          if (element.value !== text)
+            element.value = text;
+          break;
+        default:
+          that.element.textContent = text;
+      }
     });
     this.states["text"].get = function() {return that.element.value || that.element.textContent};
 
